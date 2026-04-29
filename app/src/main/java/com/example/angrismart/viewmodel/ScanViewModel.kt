@@ -2,8 +2,9 @@ package com.example.angrismart.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.angrismart.data.remote.RetrofitClient
-import com.example.angrismart.data.remote.model.PredictResponse
+import com.example.angrismart.network.DiseaseDetail
+import com.example.angrismart.network.GroqService
+import com.example.angrismart.network.RoboflowApiService
 import com.example.angrismart.utils.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,44 +14,79 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-import retrofit2.HttpException
-import java.io.IOException
 
+data class ScanResultData(
+    val diseaseName: String,
+    val confidence: String,
+    val description: String,
+    val treatment: String,
+    val riskLevel: String
+)
 
 class ScanViewModel : ViewModel() {
 
-    private val _scanState = MutableStateFlow<Resource<PredictResponse>?>(null)
-    val scanState: StateFlow<Resource<PredictResponse>?> = _scanState.asStateFlow()
+    private val _scanState = MutableStateFlow<Resource<ScanResultData>?>(null)
+    val scanState: StateFlow<Resource<ScanResultData>?> = _scanState.asStateFlow()
+
+    private val apiService = RoboflowApiService.create()
+    private val apiKey = "pXB6PH9xrIvBq48CQB9X"
 
     fun analyzeImage(photoFile: File) {
-        // Bắt đầu hiện vòng xoay Đang tải
         _scanState.value = Resource.Loading()
         
         viewModelScope.launch {
             try {
-                // Biến đổi File Ảnh cục bộ thành Gói Ảnh Gửi Qua Internet
+                // 1. Phân tích ảnh bằng Roboflow
                 val requestFile = photoFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val imagePart = MultipartBody.Part.createFormData("file", photoFile.name, requestFile)
                 
-                // Trực tiếp gọi AI Server của bạn (Sẽ bị Block cho đến khi Server trả lời xong)
-                val response = RetrofitClient.apiService.detectDisease(imagePart)
+                val response = apiService.detectDisease(apiKey, imagePart)
                 
-                // Thành công
-                _scanState.value = Resource.Success(response)
+                if (response.predictions.isEmpty()) {
+                    _scanState.value = Resource.Error("Không phát hiện thấy bệnh hoặc cây khoẻ mạnh.")
+                    return@launch
+                }
                 
-            } catch (e: HttpException) {
-                // Lỗi 4xx, 5xx từ FastAPI
-                _scanState.value = Resource.Error("Lỗi Hệ thống AI: ${e.code()}")
-            } catch (e: IOException) {
-                // Lỗi không có mạng hoặc Server bị sập/chưa mở
-                _scanState.value = Resource.Error("Máy chủ phân tích bệnh đang ngoại tuyến!")
+                // Lấy kết quả có độ tin cậy cao nhất
+                val bestPrediction = response.predictions.maxByOrNull { it.confidence }!!
+                val confidencePercent = "${(bestPrediction.confidence * 100).toInt()}%"
+                
+                if (bestPrediction.className.lowercase() == "healthy") {
+                    _scanState.value = Resource.Success(
+                        ScanResultData(
+                            diseaseName = "Cây lúa khỏe mạnh",
+                            confidence = confidencePercent,
+                            description = "Cây lúa không có dấu hiệu sâu bệnh.",
+                            treatment = "Tiếp tục chăm sóc bình thường.",
+                            riskLevel = "Thấp"
+                        )
+                    )
+                    return@launch
+                }
+
+                // 2. Lấy thông tin chi tiết bằng Groq AI
+                val diseaseDetail = GroqService.getDiseaseInfo(bestPrediction.className)
+                
+                if (diseaseDetail != null) {
+                    _scanState.value = Resource.Success(
+                        ScanResultData(
+                            diseaseName = diseaseDetail.name,
+                            confidence = confidencePercent,
+                            description = diseaseDetail.symptoms,
+                            treatment = "${diseaseDetail.treatment}\nThuốc: ${diseaseDetail.medications}",
+                            riskLevel = "Cao" // Groq Service không trả về RiskLevel rõ, ta mặc định là Cần lưu ý
+                        )
+                    )
+                } else {
+                    _scanState.value = Resource.Error("Không thể lấy thông tin từ Groq AI. Vui lòng thử lại sau.")
+                }
+
             } catch (e: Exception) {
                 _scanState.value = Resource.Error(e.localizedMessage ?: "Quá trình quét bị gián đoạn.")
             }
         }
     }
 
-    // Call hàm này sau khi Màn hình nhận được Result rồi để reset vòng xoay Loading
     fun resetState() {
         _scanState.value = null
     }
