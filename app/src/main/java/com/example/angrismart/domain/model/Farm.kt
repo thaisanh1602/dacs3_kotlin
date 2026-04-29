@@ -27,5 +27,8 @@ data class Farm(
     @set:PropertyName("area_m2")
     var areaM2: Double = 0.0,
     
+    var latitude: Double? = null,
+    var longitude: Double? = null,
+    
     val status: String = "active" // active, harvested
 )

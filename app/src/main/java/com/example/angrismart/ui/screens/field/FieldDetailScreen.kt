@@ -26,6 +26,9 @@ import com.example.angrismart.ui.theme.GreenSecondary
 import com.example.angrismart.ui.theme.YellowWarning
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +36,8 @@ fun FieldDetailScreen(
     fieldId: String,
     viewModel: FieldViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToScan: () -> Unit = {}
+    onNavigateToScan: () -> Unit = {},
+    onNavigateToAddTransaction: () -> Unit = {}
 ) {
     val farmsState by viewModel.farmsState.collectAsState()
     val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
@@ -77,6 +81,14 @@ fun FieldDetailScreen(
             // Thẻ Thông tin chính
             InfoCard(farm)
 
+            // Thẻ Vị trí Bản Đồ (Google Maps View)
+            val lat = farm.latitude
+            val lng = farm.longitude
+            if (lat != null && lng != null) {
+                Spacer(modifier = Modifier.height(24.dp))
+                FieldMapLocation(lat, lng, farm.farmName)
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Thẻ Tiến độ mùa vụ
@@ -85,7 +97,7 @@ fun FieldDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Thẻ Hành động chính
-            MainActions(onNavigateToScan)
+            MainActions(onNavigateToScan, onNavigateToAddTransaction)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -253,7 +265,7 @@ fun GrowthProgressCard(farm: Farm) {
 }
 
 @Composable
-fun MainActions(onNavigateToScan: () -> Unit) {
+fun MainActions(onNavigateToScan: () -> Unit, onNavigateToAddTransaction: () -> Unit) {
     Column {
         Text(
             text = "Hành động nhanh",
@@ -269,6 +281,17 @@ fun MainActions(onNavigateToScan: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
         ) {
             Text("🔍 QUÉT SÂU BỆNH CHO RUỘNG NÀY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Button(
+            onClick = onNavigateToAddTransaction,
+            modifier = Modifier.fillMaxWidth().height(72.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
+        ) {
+            Text("💰 THÊM KHOẢN THU / CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -305,6 +328,40 @@ fun HistorySection() {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Chưa có lịch sử quét nào cho ruộng này", color = Color.Gray)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun FieldMapLocation(lat: Double, lng: Double, name: String) {
+    Column {
+        Text(
+            text = "Vị trí địa lý",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        Card(
+            modifier = Modifier.fillMaxWidth().height(250.dp),
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            val position = LatLng(lat, lng)
+            val cameraState = rememberCameraPositionState {
+                this.position = CameraPosition.fromLatLngZoom(position, 16f)
+            }
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraState,
+                uiSettings = MapUiSettings(zoomControlsEnabled = false, scrollGesturesEnabled = false, tiltGesturesEnabled = false, rotationGesturesEnabled = false)
+            ) {
+                Marker(
+                    state = MarkerState(position = position),
+                    title = name,
+                    snippet = "Tọa độ: $lat, $lng"
+                )
             }
         }
     }

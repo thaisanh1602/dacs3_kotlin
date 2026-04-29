@@ -14,10 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.text.input.TextFieldValue
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.viewmodel.ChatMessage
 import com.example.angrismart.viewmodel.ChatViewModel
@@ -28,7 +30,7 @@ fun ChatScreen(
     viewModel: ChatViewModel = viewModel(),
     onNavigateBack: () -> Unit
 ) {
-    var textInput by remember { mutableStateOf("") }
+    var textInput by remember { mutableStateOf(TextFieldValue("")) }
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
@@ -104,15 +106,18 @@ fun ChatScreen(
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color(0xFFF5F5F5)
                     ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Send
+                    ),
                     maxLines = 3 // Cho phép gõ xuồng dòng
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
                     onClick = {
-                        if (textInput.isNotBlank()) {
-                            viewModel.sendMessage(textInput)
-                            textInput = ""
+                        if (textInput.text.isNotBlank()) {
+                            viewModel.sendMessage(textInput.text)
+                            textInput = TextFieldValue("")
                         }
                     },
                     modifier = Modifier

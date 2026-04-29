@@ -2,12 +2,16 @@ package com.example.angrismart.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -22,8 +26,8 @@ fun LoginScreen(
     onLoginSuccess: (String) -> Unit = {},
     onNavigateToRegister: () -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(TextFieldValue("")) }
+    var password by remember { mutableStateOf(TextFieldValue("")) }
     val authState by viewModel.authState.collectAsState()
     var successMessage by remember { mutableStateOf("") }
 
@@ -62,6 +66,10 @@ fun LoginScreen(
                     .height(68.dp), // Input cực lớn giúp bấm ngoài đồng không trượt
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GreenPrimary
                 )
@@ -79,6 +87,10 @@ fun LoginScreen(
                     .height(68.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GreenPrimary
                 )
@@ -87,7 +99,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { viewModel.login(email, password) },
+                onClick = { viewModel.login(email.text, password.text) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp), // Nút Đăng nhập ngoại cỡ

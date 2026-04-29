@@ -2,13 +2,17 @@ package com.example.angrismart.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,9 +27,9 @@ fun RegisterScreen(
     onNavigateBack: () -> Unit,
     onRegisterSuccess: () -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(TextFieldValue("")) }
+    var password by remember { mutableStateOf(TextFieldValue("")) }
+    var confirmPassword by remember { mutableStateOf(TextFieldValue("")) }
     var localError by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsState()
@@ -64,6 +68,10 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth().height(68.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
             )
 
@@ -77,6 +85,10 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth().height(68.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                ),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
             )
 
@@ -90,6 +102,10 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth().height(68.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
             )
 
@@ -97,13 +113,13 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-                    if (password != confirmPassword) {
+                    if (password.text != confirmPassword.text) {
                         localError = "Mật khẩu xác nhận không khớp!"
-                    } else if (password.length < 6) {
+                    } else if (password.text.length < 6) {
                         localError = "Mật khẩu quá yếu (cần tối thiểu 6 ký tự)"
                     } else {
                         localError = ""
-                        viewModel.register(email, password)
+                        viewModel.register(email.text, password.text)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(64.dp),

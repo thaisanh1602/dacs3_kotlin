@@ -37,7 +37,7 @@ class FieldViewModel(
         }
     }
 
-    fun addFarm(farmName: String, varietyName: String, areaM2: String) {
+    fun addFarm(farmName: String, varietyName: String, areaM2: String, latitude: Double? = null, longitude: Double? = null) {
         if (farmName.isBlank() || varietyName.isBlank() || areaM2.isBlank()) {
             _addFarmState.value = Resource.Error("Vui lòng điền đủ thông tin thửa ruộng!")
             return
@@ -49,12 +49,19 @@ class FieldViewModel(
             return
         }
 
+        if (latitude == null || longitude == null) {
+            _addFarmState.value = Resource.Error("Vui lòng chọn vị trí trên bản đồ!")
+            return
+        }
+
         viewModelScope.launch {
             val newFarm = Farm(
                 userId = currentUserId,
                 farmName = farmName,
                 varietyName = varietyName,
                 areaM2 = area,
+                latitude = latitude,
+                longitude = longitude,
                 ageDays = 0, // Vừa gieo sạ thì bằng 0
                 totalGrowthDays = 95
             )

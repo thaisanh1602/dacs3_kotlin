@@ -32,7 +32,8 @@ fun HomeDashboardScreen(
     onNavigateToFields: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
     onNavigateToWeather: () -> Unit = {},
-    onNavigateToChat: () -> Unit = {}
+    onNavigateToChat: () -> Unit = {},
+    onNavigateToMap: () -> Unit = {}
 ) {
     val weatherState by weatherViewModel.currentWeather.collectAsState()
     val diseaseRisk by weatherViewModel.diseaseRisk.collectAsState()
@@ -111,6 +112,14 @@ fun HomeDashboardScreen(
                         emoji = "🤖",
                         backgroundColor = YellowWarning,
                         onClick = onNavigateToChat
+                    )
+                }
+                item {
+                    MenuCard(
+                        title = "Bản đồ\nNông Nghiệp",
+                        emoji = "🗺️",
+                        backgroundColor = Color(0xFFA5D6A7),
+                        onClick = onNavigateToMap
                     )
                 }
             }
