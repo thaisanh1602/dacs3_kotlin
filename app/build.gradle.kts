@@ -72,10 +72,15 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:${camerax_version}")
     implementation("androidx.camera:camera-view:${camerax_version}")
     
-    // Call Python FastAPI
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Networking & AI
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.coil.compose)
+    implementation(libs.gson)
+    implementation(libs.gemini)
+    implementation(libs.androidx.compose.foundation)
     
     // Background job (Push Notification hàng ngày)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
