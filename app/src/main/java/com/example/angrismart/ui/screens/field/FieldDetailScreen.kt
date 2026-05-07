@@ -33,7 +33,9 @@ fun FieldDetailScreen(
     fieldId: String,
     viewModel: FieldViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToScan: () -> Unit = {}
+    onNavigateToScan: () -> Unit = {},
+    onNavigateToAddHarvest: () -> Unit = {},
+    onNavigateToSeasonProfit: () -> Unit = {}
 ) {
     val farmsState by viewModel.farmsState.collectAsState()
     val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
@@ -85,13 +87,12 @@ fun FieldDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Thẻ Hành động chính
-            MainActions(onNavigateToScan)
+            MainActions(
+                onNavigateToScan = onNavigateToScan,
+                onNavigateToAddHarvest = onNavigateToAddHarvest,
+                onNavigateToSeasonProfit = onNavigateToSeasonProfit
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Lịch sử & Báo cáo (Placeholders)
-            HistorySection()
-            
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -253,7 +254,11 @@ fun GrowthProgressCard(farm: Farm) {
 }
 
 @Composable
-fun MainActions(onNavigateToScan: () -> Unit) {
+fun MainActions(
+    onNavigateToScan: () -> Unit,
+    onNavigateToAddHarvest: () -> Unit = {},
+    onNavigateToSeasonProfit: () -> Unit = {}
+) {
     Column {
         Text(
             text = "Hành động nhanh",
@@ -261,14 +266,39 @@ fun MainActions(onNavigateToScan: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp)
         )
-        
+
+        // Nút quét sâu bệnh
         Button(
             onClick = onNavigateToScan,
-            modifier = Modifier.fillMaxWidth().height(72.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
         ) {
             Text("🔍 QUÉT SÂU BỆNH CHO RUỘNG NÀY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Nút ghi thu hoạch
+        Button(
+            onClick = onNavigateToAddHarvest,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = YellowWarning)
+        ) {
+            Text("📦 GHI NHẬN THU HOẠCH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFF3E2723))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Nút xem lợi nhuận mùa vụ
+        OutlinedButton(
+            onClick = onNavigateToSeasonProfit,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(2.dp, GreenPrimary)
+        ) {
+            Text("📊 XEM LỢI NHUẬN MÙA VỤ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
         }
     }
 }
