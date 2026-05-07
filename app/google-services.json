@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "291360837720",
-    "project_id": "angrismart",
-    "storage_bucket": "angrismart.firebasestorage.app"
+    "project_number": "484954593536",
+    "project_id": "scanfordisease-62837",
+    "storage_bucket": "scanfordisease-62837.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:291360837720:android:f472a97633807d34d2fa2d",
+        "mobilesdk_app_id": "1:484954593536:android:4bf6df4ef882f6a9723be5",
         "android_client_info": {
           "package_name": "com.example.angrismart"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAld4fiBQ6cys0YDdxaR-6l3MPtl5R0ovM"
+          "current_key": "AIzaSyDuwOvkScLskQE-n5FtahqUKoBRLlbYtI0"
         }
       ],
       "services": {

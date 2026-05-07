@@ -25,7 +25,7 @@ import com.example.angrismart.utils.DiseaseCheckWorker
 import com.example.angrismart.utils.NotificationHelper
 import java.util.concurrent.TimeUnit
 
-enum class Screen { LOGIN, REGISTER, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT }
+enum class Screen { LOGIN, REGISTER, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT, ADD_HARVEST, SEASON_PROFIT }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +74,8 @@ class MainActivity : ComponentActivity() {
                         Screen.SCAN_RESULT -> Screen.SCAN
                         Screen.CHAT -> Screen.HOME
                         Screen.REGISTER -> Screen.LOGIN
+                        Screen.ADD_HARVEST -> Screen.FIELD_DETAIL
+                        Screen.SEASON_PROFIT -> Screen.FIELD_DETAIL
                         else -> currentScreen
                     }
                 }
@@ -113,7 +115,9 @@ class MainActivity : ComponentActivity() {
                         com.example.angrismart.ui.screens.field.FieldDetailScreen(
                             fieldId = selectedFieldId,
                             onNavigateBack = { currentScreen = Screen.MY_FIELDS },
-                            onNavigateToScan = { currentScreen = Screen.SCAN }
+                            onNavigateToScan = { currentScreen = Screen.SCAN },
+                            onNavigateToAddHarvest = { currentScreen = Screen.ADD_HARVEST },
+                            onNavigateToSeasonProfit = { currentScreen = Screen.SEASON_PROFIT }
                         )
                     }
                     Screen.ADD_FIELD -> {
@@ -153,6 +157,20 @@ class MainActivity : ComponentActivity() {
                     Screen.CHAT -> {
                         com.example.angrismart.ui.screens.chat.ChatScreen(
                             onNavigateBack = { currentScreen = Screen.HOME }
+                        )
+                    }
+                    Screen.ADD_HARVEST -> {
+                        com.example.angrismart.ui.screens.field.AddHarvestScreen(
+                            fieldId = selectedFieldId,
+                            onNavigateBack = { currentScreen = Screen.FIELD_DETAIL },
+                            onSaveSuccess = { currentScreen = Screen.SEASON_PROFIT }
+                        )
+                    }
+                    Screen.SEASON_PROFIT -> {
+                        com.example.angrismart.ui.screens.field.SeasonProfitScreen(
+                            fieldId = selectedFieldId,
+                            onNavigateBack = { currentScreen = Screen.FIELD_DETAIL },
+                            onNavigateToAddHarvest = { currentScreen = Screen.ADD_HARVEST }
                         )
                     }
                 }
