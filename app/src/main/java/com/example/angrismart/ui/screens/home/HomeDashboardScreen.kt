@@ -1,16 +1,20 @@
 package com.example.angrismart.ui.screens.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -21,6 +25,7 @@ import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.ui.theme.GreenSecondary
 import com.example.angrismart.ui.theme.RedError
 import com.example.angrismart.ui.theme.YellowWarning
+import com.example.angrismart.ui.theme.BackgroundLight
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.WeatherViewModel
 
@@ -32,163 +37,227 @@ fun HomeDashboardScreen(
     onNavigateToFields: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
     onNavigateToWeather: () -> Unit = {},
-    onNavigateToChat: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {}
+    onNavigateToChat: () -> Unit = {}
 ) {
     val weatherState by weatherViewModel.currentWeather.collectAsState()
     val diseaseRisk by weatherViewModel.diseaseRisk.collectAsState()
+    val scrollState = rememberScrollState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("AngriSmart", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary)
-            )
-        }
+        containerColor = BackgroundLight
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .verticalScroll(scrollState)
         ) {
-            // Lời chào và Thẻ thời tiết THẬT từ API
-            GreetingSection(userName, weatherState)
+            // Header Section with Gradient and Weather Card
+            HeaderSection(userName, weatherState)
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Banner cảnh báo bệnh (CHỈ HIỆN NẾU CÓ NGUY CƠ)
-            diseaseRisk?.let { risk ->
-                if (risk.hasRisk) {
-                    AlertBanner(
-                        message = "⚠️ ${risk.diseaseName}\nDự kiến ngày ${risk.riskDay}",
-                        onClick = { /* Mở chi tiết cảnh báo */ }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
-            Text(
-                text = "Tính năng chính",
-                style = MaterialTheme.typography.titleLarge,
-                color = GreenPrimary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            // Lưới các chức năng lớn
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
             ) {
-                item {
-                    MenuCard(
-                        title = "Quản lý\nĐồng Ruộng",
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Banner cảnh báo bệnh (CHỈ HIỆN NẾU CÓ NGUY CƠ)
+                diseaseRisk?.let { risk ->
+                    if (risk.hasRisk) {
+                        AlertBanner(
+                            message = "⚠️ ${risk.diseaseName}\nDự kiến ngày ${risk.riskDay}",
+                            onClick = { /* Mở chi tiết cảnh báo */ }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                Text(
+                    text = "Tính năng nổi bật",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = GreenPrimary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Tính năng chính: Quét Sâu Bệnh
+                HeroFeatureCard(
+                    title = "Quét\nSâu Bệnh",
+                    subtitle = "Sử dụng AI để nhận diện bệnh",
+                    emoji = "📷",
+                    gradient = Brush.linearGradient(
+                        colors = listOf(GreenPrimary, Color(0xFF43A047))
+                    ),
+                    onClick = onNavigateToScan
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Các tính năng phụ
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    SmallFeatureCard(
+                        title = "Đồng Ruộng",
                         emoji = "🌾",
-                        backgroundColor = GreenSecondary,
+                        gradient = Brush.linearGradient(
+                            colors = listOf(GreenSecondary, Color(0xFFA5D6A7))
+                        ),
+                        modifier = Modifier.weight(1f),
                         onClick = onNavigateToFields
                     )
-                }
-                item {
-                    MenuCard(
-                        title = "Quét\nSâu Bệnh",
-                        emoji = "📷",
-                        backgroundColor = GreenPrimary,
-                        textColor = Color.White,
-                        onClick = onNavigateToScan
-                    )
-                }
-                item {
-                    MenuCard(
-                        title = "Thời tiết\nNông Vụ",
+
+                    SmallFeatureCard(
+                        title = "Thời tiết",
                         emoji = "⛅",
-                        backgroundColor = Color(0xFF4FC3F7),
+                        gradient = Brush.linearGradient(
+                            colors = listOf(Color(0xFF29B6F6), Color(0xFF81D4FA))
+                        ),
+                        modifier = Modifier.weight(1f),
                         onClick = onNavigateToWeather
                     )
                 }
-                item {
-                    MenuCard(
-                        title = "Hỏi đáp\nChuyên gia AI",
-                        emoji = "🤖",
-                        backgroundColor = YellowWarning,
-                        onClick = onNavigateToChat
-                    )
-                }
-                item {
-                    MenuCard(
-                        title = "Bản đồ\nNông Nghiệp",
-                        emoji = "🗺️",
-                        backgroundColor = Color(0xFFA5D6A7),
-                        onClick = onNavigateToMap
-                    )
-                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Hỏi đáp AI Full width nhỏ
+                MediumFeatureCard(
+                    title = "Hỏi đáp Chuyên gia AI",
+                    subtitle = "Giải đáp mọi thắc mắc nông nghiệp",
+                    emoji = "🤖",
+                    gradient = Brush.linearGradient(
+                        colors = listOf(Color(0xFFF9A825), YellowWarning)
+                    ),
+                    onClick = onNavigateToChat
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
 @Composable
-fun GreetingSection(userName: String, weatherState: Resource<com.example.angrismart.data.remote.model.CurrentWeather>) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+fun HeaderSection(userName: String, weatherState: Resource<com.example.angrismart.data.remote.model.CurrentWeather>) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
     ) {
-        Column {
-            Text(
-                text = "Chào anh/chú,",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.Gray
-            )
-            Text(
-                text = userName,
-                style = MaterialTheme.typography.titleLarge,
-                color = GreenPrimary,
-                fontSize = 32.sp
-            )
+        // Background Gradient
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF1B5E20), GreenPrimary)
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 32.dp)
+            ) {
+                Text(
+                    text = "Chào buổi sáng,",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+                Text(
+                    text = userName,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
-        // Thẻ thời tiết THẬT từ OpenMeteo
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
-            shape = RoundedCornerShape(16.dp)
+        // Thẻ thời tiết đè lên viền dưới của Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+        ) {
+            WeatherCard(weatherState)
+        }
+    }
+}
+
+@Composable
+fun WeatherCard(weatherState: Resource<com.example.angrismart.data.remote.model.CurrentWeather>) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
         ) {
             when (weatherState) {
                 is Resource.Loading -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.padding(16.dp).size(24.dp),
-                        strokeWidth = 2.dp
+                        modifier = Modifier.size(36.dp),
+                        color = GreenPrimary,
+                        strokeWidth = 3.dp
                     )
                 }
                 is Resource.Success -> {
                     val weather = weatherState.data!!
                     val (emoji, desc) = WeatherViewModel.weatherDescription(weather.weathercode)
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = emoji, fontSize = 28.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "${weather.temperature.toInt()}°C",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color(0xFF1565C0)
-                            )
-                            Text(
-                                text = desc,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = emoji, fontSize = 42.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color(0xFF424242),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Gió: ${weather.windspeed.toInt()} km/h",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Gray
+                                )
+                            }
                         }
+                        Text(
+                            text = "${weather.temperature.toInt()}°C",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = GreenPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
                 is Resource.Error -> {
-                    Text(
-                        text = "❌",
-                        fontSize = 28.sp,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(text = "❌", fontSize = 28.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Không thể tải thời tiết",
+                            color = RedError,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }
@@ -198,59 +267,160 @@ fun GreetingSection(userName: String, weatherState: Resource<com.example.angrism
 @Composable
 fun AlertBanner(message: String, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = RedError.copy(alpha = 0.1f)),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.horizontalGradient(listOf(Color(0xFFFFEBEE), Color.White)))
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = "Cảnh báo",
                 tint = RedError,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = RedError,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                lineHeight = 22.sp
             )
         }
     }
 }
 
 @Composable
-fun MenuCard(
+fun HeroFeatureCard(
     title: String,
+    subtitle: String,
     emoji: String,
-    backgroundColor: Color,
-    textColor: Color = Color.Black,
+    gradient: Brush,
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(140.dp)
+            .shadow(8.dp, RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(gradient)
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 30.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+            }
+            Text(
+                text = emoji,
+                fontSize = 64.sp,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun SmallFeatureCard(
+    title: String,
+    emoji: String,
+    gradient: Brush,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .aspectRatio(1f)
+            .shadow(6.dp, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(gradient)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = emoji, fontSize = 54.sp)
+            Text(text = emoji, fontSize = 48.sp)
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
-                color = textColor,
-                textAlign = TextAlign.Center,
-                lineHeight = 26.sp
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+fun MediumFeatureCard(
+    title: String,
+    subtitle: String,
+    emoji: String,
+    gradient: Brush,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(6.dp, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(gradient)
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = emoji, fontSize = 40.sp)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+            }
         }
     }
 }

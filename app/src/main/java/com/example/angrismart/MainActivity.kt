@@ -25,9 +25,7 @@ import com.example.angrismart.utils.DiseaseCheckWorker
 import com.example.angrismart.utils.NotificationHelper
 import java.util.concurrent.TimeUnit
 
-import com.example.angrismart.ui.screens.field.AddFinancialTransactionScreen
-
-enum class Screen { LOGIN, REGISTER, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT, MAP, ADD_TRANSACTION }
+enum class Screen { LOGIN, REGISTER, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT, ADD_HARVEST, SEASON_PROFIT }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,9 +73,9 @@ class MainActivity : ComponentActivity() {
                         Screen.SCAN -> Screen.HOME
                         Screen.SCAN_RESULT -> Screen.SCAN
                         Screen.CHAT -> Screen.HOME
-                        Screen.MAP -> Screen.HOME
                         Screen.REGISTER -> Screen.LOGIN
-                        Screen.ADD_TRANSACTION -> Screen.FIELD_DETAIL
+                        Screen.ADD_HARVEST -> Screen.FIELD_DETAIL
+                        Screen.SEASON_PROFIT -> Screen.FIELD_DETAIL
                         else -> currentScreen
                     }
                 }
@@ -100,8 +98,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToFields = { currentScreen = Screen.MY_FIELDS },
                             onNavigateToScan = { currentScreen = Screen.SCAN },
                             onNavigateToWeather = { currentScreen = Screen.WEATHER },
-                            onNavigateToChat = { currentScreen = Screen.CHAT },
-                            onNavigateToMap = { currentScreen = Screen.MAP }
+                            onNavigateToChat = { currentScreen = Screen.CHAT }
                         )
                     }
                     Screen.MY_FIELDS -> {
@@ -119,7 +116,8 @@ class MainActivity : ComponentActivity() {
                             fieldId = selectedFieldId,
                             onNavigateBack = { currentScreen = Screen.MY_FIELDS },
                             onNavigateToScan = { currentScreen = Screen.SCAN },
-                            onNavigateToAddTransaction = { currentScreen = Screen.ADD_TRANSACTION }
+                            onNavigateToAddHarvest = { currentScreen = Screen.ADD_HARVEST },
+                            onNavigateToSeasonProfit = { currentScreen = Screen.SEASON_PROFIT }
                         )
                     }
                     Screen.ADD_FIELD -> {
@@ -161,21 +159,18 @@ class MainActivity : ComponentActivity() {
                             onNavigateBack = { currentScreen = Screen.HOME }
                         )
                     }
-                    Screen.MAP -> {
-                        val mapViewModel = remember { 
-                            com.example.angrismart.ui.screens.map.MapViewModel(
-                                com.example.angrismart.data.remote.MapRetrofitClient.mapService
-                            ) 
-                        }
-                        com.example.angrismart.ui.screens.map.FarmlandMapScreen(
-                            viewModel = mapViewModel
-                        )
-                    }
-                    Screen.ADD_TRANSACTION -> {
-                        AddFinancialTransactionScreen(
+                    Screen.ADD_HARVEST -> {
+                        com.example.angrismart.ui.screens.field.AddHarvestScreen(
                             fieldId = selectedFieldId,
                             onNavigateBack = { currentScreen = Screen.FIELD_DETAIL },
-                            onSaveSuccess = { currentScreen = Screen.FIELD_DETAIL }
+                            onSaveSuccess = { currentScreen = Screen.SEASON_PROFIT }
+                        )
+                    }
+                    Screen.SEASON_PROFIT -> {
+                        com.example.angrismart.ui.screens.field.SeasonProfitScreen(
+                            fieldId = selectedFieldId,
+                            onNavigateBack = { currentScreen = Screen.FIELD_DETAIL },
+                            onNavigateToAddHarvest = { currentScreen = Screen.ADD_HARVEST }
                         )
                     }
                 }
