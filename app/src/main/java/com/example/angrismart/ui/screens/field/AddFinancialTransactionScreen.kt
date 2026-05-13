@@ -31,23 +31,14 @@ fun AddFinancialTransactionScreen(
     onNavigateBack: () -> Unit,
     onSaveSuccess: () -> Unit
 ) {
-    val repository = remember { FinancialTransactionRepositoryImpl() }
-    val viewModel: FinancialTransactionViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return FinancialTransactionViewModel(repository) as T
-            }
-        }
-    )
+    val viewModel: FinancialTransactionViewModel = viewModel()
 
-    var type by remember { mutableStateOf("expense") } // 'expense' or 'income'
+    val categoryOptions = listOf("Mua phân bón", "Mua thuốc trừ sâu", "Thuê nhân công", "Thuê máy móc", "Khác")
     var category by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("2026-04-10T15:30:00Z") } // TODO: Use date picker
     var expanded by remember { mutableStateOf(false) }
-
-    val categories = if (type == "expense") listOf("Mua phân bón", "Mua thuốc trừ sâu", "Thuê nhân công", "Thuê máy móc", "Khác") else listOf("Bán lúa", "Trợ cấp", "Khác")
 
     val addStatus by viewModel.addTransactionStatus.collectAsState()
     val scrollState = rememberScrollState()
@@ -79,32 +70,13 @@ fun AddFinancialTransactionScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-            // Loại giao dịch
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = { type = "expense"; category = "" },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (type == "expense") RedError else Color.LightGray,
-                        contentColor = if (type == "expense") Color.White else Color.Black
-                    )
-                ) {
-                    Text("Khoản Chi")
-                }
-                Button(
-                    onClick = { type = "income"; category = "" },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (type == "income") GreenPrimary else Color.LightGray,
-                        contentColor = if (type == "income") Color.White else Color.Black
-                    )
-                ) {
-                    Text("Khoản Thu")
-                }
-            }
+            Text(
+                text = "💰 Nhập Khoản Chi",
+                style = MaterialTheme.typography.titleLarge,
+                color = RedError,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
             // Danh mục
             ExposedDropdownMenuBox(
@@ -118,14 +90,14 @@ fun AddFinancialTransactionScreen(
                     label = { Text("Danh mục") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(focusedBorderColor = GreenPrimary),
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth().height(68.dp),
+                    modifier = Modifier.menuAnchor().fillMaxWidth().height(68.dp),
                     shape = RoundedCornerShape(12.dp)
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    categories.forEach { selectionOption ->
+                    categoryOptions.forEach { selectionOption ->
                         DropdownMenuItem(
                             text = { Text(selectionOption) },
                             onClick = {
@@ -194,7 +166,7 @@ fun AddFinancialTransactionScreen(
                         val transaction = FinancialTransaction(
                             fieldId = fieldId,
                             userUid = "debug_user_123", // TODO: Get from auth
-                            type = type,
+                            type = "expense",
                             category = category,
                             price = priceDouble,
                             note = note,

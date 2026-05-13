@@ -37,7 +37,14 @@ class FieldViewModel(
         }
     }
 
-    fun addFarm(farmName: String, varietyName: String, areaM2: String, latitude: Double? = null, longitude: Double? = null) {
+    fun addFarm(
+        farmName: String,
+        varietyName: String,
+        areaM2: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        sowingDate: com.google.firebase.Timestamp = com.google.firebase.Timestamp.now()
+    ) {
         if (farmName.isBlank() || varietyName.isBlank() || areaM2.isBlank()) {
             _addFarmState.value = Resource.Error("Vui lòng điền đủ thông tin thửa ruộng!")
             return
@@ -62,13 +69,21 @@ class FieldViewModel(
                 areaM2 = area,
                 latitude = latitude,
                 longitude = longitude,
-                ageDays = 0, // Vừa gieo sạ thì bằng 0
+                ageDays = 0,
+                sowingDate = sowingDate,
                 totalGrowthDays = 95
             )
 
             repository.addFarm(newFarm).collect { result ->
                 _addFarmState.value = result
             }
+        }
+    }
+
+    fun updateSowingDate(farm: Farm, newDate: com.google.firebase.Timestamp) {
+        viewModelScope.launch {
+            val updatedFarm = farm.copy(sowingDate = newDate)
+            repository.updateFarm(updatedFarm).collect { /* Xử lý nếu cần */ }
         }
     }
 

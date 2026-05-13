@@ -52,7 +52,7 @@ data class Harvest(
 
     @get:PropertyName("harvest_date")
     @set:PropertyName("harvest_date")
-    var harvestDate: Timestamp = Timestamp.now(),
+    var harvestDate: Timestamp? = null,
 
     /** Tên vụ mùa, ví dụ: "Đông Xuân 2026" */
     @get:PropertyName("crop_season")

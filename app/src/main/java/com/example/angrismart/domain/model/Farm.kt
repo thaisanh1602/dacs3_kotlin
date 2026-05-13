@@ -23,6 +23,10 @@ data class Farm(
     @set:PropertyName("total_growth_days")
     var totalGrowthDays: Int = 100, // Thường 90-110 ngày tuỳ giống lúa
 
+    @get:PropertyName("sowing_date")
+    @set:PropertyName("sowing_date")
+    var sowingDate: com.google.firebase.Timestamp? = null,
+
     @get:PropertyName("area_m2")
     @set:PropertyName("area_m2")
     var areaM2: Double = 0.0,

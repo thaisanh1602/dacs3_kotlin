@@ -1,6 +1,7 @@
 package com.example.angrismart.ui.screens.field
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,10 +51,18 @@ fun AddFieldScreen(
     var area by remember { mutableStateOf(TextFieldValue("")) }
     var selectedVariety by remember { mutableStateOf("Bấm để chọn giống lúa...") }
     var expanded by remember { mutableStateOf(false) }
-    
+    var showSowingDatePicker by remember { mutableStateOf(false) }
+    val sowingDatePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis()
+    )
+    val sowingDateMillis by remember { derivedStateOf { sowingDatePickerState.selectedDateMillis ?: System.currentTimeMillis() } }
+    val sowingDateLabel = remember(sowingDateMillis) {
+        java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date(sowingDateMillis))
+    }
+
     val addState by viewModel.addFarmState.collectAsState()
     val varieties = listOf("Lúa ST25", "Jasmine 85", "Đài Thơm 8", "OM5451")
-    val scrollState = rememberScrollState() 
+    val scrollState = rememberScrollState()
 
     val context = LocalContext.current
     var currentLatLng by remember { mutableStateOf<LatLng?>(null) }
@@ -143,7 +152,7 @@ fun AddFieldScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Trở về", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
                     }
                 }
             )
@@ -296,15 +305,36 @@ fun AddFieldScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = "29/03/2026",
+                    value = sowingDateLabel,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Ngày gieo sạ") },
-                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Lịch", tint = GreenPrimary) },
+                    trailingIcon = {
+                        IconButton(onClick = { showSowingDatePicker = true }) {
+                            Icon(Icons.Default.DateRange, contentDescription = "Lịch", tint = GreenPrimary)
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary),
-                    modifier = Modifier.fillMaxWidth().height(68.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(68.dp)
+                        .clickable { showSowingDatePicker = true },
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                if (showSowingDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showSowingDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = { showSowingDatePicker = false }) { Text("XÁC NHẬN") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showSowingDatePicker = false }) { Text("HỦY") }
+                        }
+                    ) {
+                        DatePicker(state = sowingDatePickerState)
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -317,7 +347,10 @@ fun AddFieldScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.addFarm(farmName.text, selectedVariety, area.text, currentLatLng?.latitude, currentLatLng?.longitude) },
+                    onClick = {
+                        val sowingTimestamp = com.google.firebase.Timestamp(java.util.Date(sowingDateMillis))
+                        viewModel.addFarm(farmName.text, selectedVariety, area.text, currentLatLng?.latitude, currentLatLng?.longitude, sowingTimestamp)
+                    },
                     modifier = Modifier.fillMaxWidth().height(64.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),

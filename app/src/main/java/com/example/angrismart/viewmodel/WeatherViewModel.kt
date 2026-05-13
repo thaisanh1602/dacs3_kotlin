@@ -30,14 +30,14 @@ class WeatherViewModel : ViewModel() {
         loadWeather()
     }
 
-    fun loadWeather() {
+    fun loadWeather(lat: Double = 10.762622, lon: Double = 106.660172) {
         viewModelScope.launch {
             _currentWeather.value = Resource.Loading()
             try {
-                // Toạ độ TP.HCM mặc định
+                // Lấy thời tiết dựa trên toạ độ
                 val response = WeatherRetrofitClient.weatherService.getForecast(
-                    lat = 10.762622,
-                    lon = 106.660172
+                    lat = lat,
+                    lon = lon
                 )
 
                 // Trạng thái thời tiết hôm nay và 7 ngày tới

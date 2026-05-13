@@ -78,7 +78,7 @@ fun WeatherScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(text = "TP.Hồ Chí Minh", color = Color.Gray, fontSize = 16.sp)
+                                    Text(text = "Vị trí của bạn", color = Color.Gray, fontSize = 16.sp)
                                     Text(
                                         text = "${data?.temperature}°C",
                                         fontWeight = FontWeight.Black,

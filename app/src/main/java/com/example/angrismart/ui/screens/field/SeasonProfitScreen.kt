@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,17 +30,16 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeasonProfitScreen(
-    fieldId: String,
     harvestViewModel: HarvestViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToAddHarvest: () -> Unit = {}
 ) {
-    val harvestState by harvestViewModel.fieldHarvestState.collectAsState()
-    val vndFormat = NumberFormat.getNumberInstance(Locale("vi", "VN"))
+    val harvestState by harvestViewModel.harvestListState.collectAsState()
+    val vndFormat = NumberFormat.getNumberInstance(Locale.Builder().setLanguage("vi").setRegion("VN").build())
 
-    // Khi màn hình mở, load dữ liệu thu hoạch theo ruộng
-    LaunchedEffect(fieldId) {
-        harvestViewModel.loadHarvestsByField(fieldId)
+    // Khi màn hình mở, load dữ liệu thu hoạch TOÀN BỘ của user
+    LaunchedEffect(Unit) {
+        harvestViewModel.loadHarvestsByUser()
     }
 
     val harvests = (harvestState as? Resource.Success)?.data ?: emptyList()
@@ -51,17 +50,11 @@ fun SeasonProfitScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "Lợi Nhuận Mùa Vụ",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("Thống kê Lợi nhuận", color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
                     }
                 }
             )
@@ -111,6 +104,11 @@ fun SeasonProfitScreen(
                     if (harvests.isEmpty()) {
                         item { EmptyHarvestPlaceholder(onNavigateToAddHarvest) }
                     } else {
+                        // --- Biểu đồ cột ---
+                        item {
+                            ProfitBarChart(harvests = harvests)
+                        }
+
                         item {
                             Text(
                                 "Lịch sử thu hoạch",
@@ -263,8 +261,8 @@ private fun HarvestItemCard(harvest: Harvest, vndFormat: NumberFormat) {
     val profitBgColor = if (isProfitable) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
 
     val dateStr = try {
-        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale("vi", "VN"))
-        sdf.format(harvest.harvestDate.toDate())
+        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.Builder().setLanguage("vi").setRegion("VN").build())
+        harvest.harvestDate?.let { sdf.format(it.toDate()) } ?: "---"
     } catch (e: Exception) { "---" }
 
     Card(
@@ -369,6 +367,64 @@ private fun EmptyHarvestPlaceholder(onAdd: () -> Unit) {
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("📦 Ghi thu hoạch đầu tiên", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfitBarChart(harvests: List<Harvest>, modifier: Modifier = Modifier) {
+    if (harvests.isEmpty()) return
+
+    // Sort by date to show timeline
+    val sortedHarvests = harvests.sortedBy { it.harvestDate }.takeLast(6)
+    val maxAbsValue = sortedHarvests.maxOfOrNull { Math.abs(it.profit) } ?: 1.0
+    val range = maxAbsValue * 1.2 // Thêm khoảng trống ở trên cùng
+
+    Card(
+        modifier = modifier.fillMaxWidth().height(200.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Biểu đồ Lợi nhuận (6 vụ gần nhất)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                sortedHarvests.forEach { harvest ->
+                    val isPositive = harvest.profit >= 0
+                    val fraction = (Math.abs(harvest.profit) / range).toFloat().coerceIn(0.01f, 1f)
+                    val barColor = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336)
+                    val seasonAbbr = harvest.cropSeason.split(" ").map { it.firstOrNull()?.uppercase() ?: "" }.joinToString("").take(4)
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    ) {
+                        // Thanh cột
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.5f)
+                                .fillMaxHeight(fraction)
+                                .background(barColor, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        // Nhãn mùa vụ
+                        Text(
+                            text = seasonAbbr,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
         }
     }

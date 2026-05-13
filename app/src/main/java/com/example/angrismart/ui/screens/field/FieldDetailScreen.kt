@@ -1,17 +1,20 @@
 package com.example.angrismart.ui.screens.field
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import java.util.Calendar
+import java.util.Date
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,10 +38,15 @@ fun FieldDetailScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
     onNavigateToAddHarvest: () -> Unit = {},
-    onNavigateToSeasonProfit: () -> Unit = {}
+    onNavigateToAddTransaction: () -> Unit = {}
 ) {
     val farmsState by viewModel.farmsState.collectAsState()
     val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = farm?.sowingDate?.toDate()?.time ?: System.currentTimeMillis()
+    )
 
     Scaffold(
         topBar = {
@@ -47,15 +55,40 @@ fun FieldDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Sửa */ }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Sửa", tint = Color.White)
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Cập nhật ngày gieo", tint = Color.White)
                     }
                 }
             )
+
+            if (showDatePicker) {
+                DatePickerDialog(
+                    onDismissRequest = { showDatePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                farm?.let { f ->
+                                    viewModel.updateSowingDate(f, com.google.firebase.Timestamp(Date(millis)))
+                                }
+                            }
+                            showDatePicker = false
+                        }) {
+                            Text("XÁC NHẬN")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDatePicker = false }) {
+                            Text("HỦY")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
         }
     ) { paddingValues ->
         if (farm == null) {
@@ -82,7 +115,9 @@ fun FieldDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Thẻ Tiến độ mùa vụ
-            GrowthProgressCard(farm)
+            GrowthProgressCard(farm) {
+                showDatePicker = true
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -90,7 +125,7 @@ fun FieldDetailScreen(
             MainActions(
                 onNavigateToScan = onNavigateToScan,
                 onNavigateToAddHarvest = onNavigateToAddHarvest,
-                onNavigateToSeasonProfit = onNavigateToSeasonProfit
+                onNavigateToAddTransaction = onNavigateToAddTransaction
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -112,8 +147,7 @@ fun InfoCard(farm: Farm) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "Thông tin thửa ruộng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
-            
-            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
 
             DetailItem("Giống lúa", farm.varietyName, "🌱")
             DetailItem("Diện tích", "${farm.areaM2} m²", "📐")
@@ -139,10 +173,15 @@ fun DetailItem(label: String, value: String, icon: String) {
 }
 
 @Composable
-fun GrowthProgressCard(farm: Farm) {
-    val progress = (farm.ageDays.toFloat() / farm.totalGrowthDays.toFloat()).coerceIn(0f, 1f)
-    val stageName = getStageName(farm.ageDays, farm.totalGrowthDays)
-    val stageColor = getStageColor(farm.ageDays, farm.totalGrowthDays)
+fun GrowthProgressCard(farm: Farm, onUpdateClick: () -> Unit) {
+    val realAgeDays = farm.sowingDate?.let { date ->
+        val diffInMillies = System.currentTimeMillis() - date.toDate().time
+        java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
+    } ?: farm.ageDays
+
+    val progress = (realAgeDays.toFloat() / farm.totalGrowthDays.toFloat()).coerceIn(0f, 1f)
+    val stageName = getStageName(realAgeDays, farm.totalGrowthDays)
+    val stageColor = getStageColor(realAgeDays, farm.totalGrowthDays)
     
     val stages = listOf("Mạ non", "Đẻ nhánh", "Làm đòng", "Chín", "Thu hoạch")
     val currentStageIndex = when {
@@ -168,15 +207,22 @@ fun GrowthProgressCard(farm: Farm) {
                 Text(text = "Dòng thời gian lúa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = stageColor.copy(alpha = 0.15f)
+                    color = stageColor.copy(alpha = 0.15f),
+                    modifier = Modifier.clickable { onUpdateClick() }
                 ) {
-                    Text(
-                        text = "Ngày thứ ${farm.ageDays}",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        color = stageColor,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "Ngày thứ $realAgeDays",
+                            color = stageColor,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = stageColor)
+                    }
                 }
             }
 
@@ -257,7 +303,7 @@ fun GrowthProgressCard(farm: Farm) {
 fun MainActions(
     onNavigateToScan: () -> Unit,
     onNavigateToAddHarvest: () -> Unit = {},
-    onNavigateToSeasonProfit: () -> Unit = {}
+    onNavigateToAddTransaction: () -> Unit = {}
 ) {
     Column {
         Text(
@@ -291,14 +337,14 @@ fun MainActions(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Nút xem lợi nhuận mùa vụ
+        // Nút thêm thu chi
         OutlinedButton(
-            onClick = onNavigateToSeasonProfit,
+            onClick = onNavigateToAddTransaction,
             modifier = Modifier.fillMaxWidth().height(64.dp),
             shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(2.dp, GreenPrimary)
         ) {
-            Text("📊 XEM LỢI NHUẬN MÙA VỤ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
+            Text("💰 THÊM KHOẢN THU / CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
         }
     }
 }

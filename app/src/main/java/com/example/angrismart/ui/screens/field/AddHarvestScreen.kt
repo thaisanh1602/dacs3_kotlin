@@ -7,7 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.HarvestViewModel
+import com.example.angrismart.viewmodel.FieldViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -30,6 +31,7 @@ import java.util.Locale
 fun AddHarvestScreen(
     fieldId: String,
     harvestViewModel: HarvestViewModel = viewModel(),
+    fieldViewModel: FieldViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onSaveSuccess: () -> Unit = {}
 ) {
@@ -43,10 +45,47 @@ fun AddHarvestScreen(
     var cropSeason by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Live preview lợi nhuận
     val previewRevenue = (totalWeight.toDoubleOrNull() ?: 0.0) * (salePrice.toDoubleOrNull() ?: 0.0)
     val previewProfit = previewRevenue - (totalExpense.toDoubleOrNull() ?: 0.0)
-    val vndFormat = NumberFormat.getNumberInstance(Locale("vi", "VN"))
+
+    val vndFormat = remember {
+        NumberFormat.getNumberInstance(Locale.Builder().setLanguage("vi").setRegion("VN").build())
+    }
+
+    // Chỉ dùng FieldViewModel để tự động điền thông tin giống lúa và vụ mùa
+    val farmsState by fieldViewModel.farmsState.collectAsState()
+
+    LaunchedEffect(fieldId) {
+        if (fieldId.isNotEmpty()) {
+            fieldViewModel.loadFarms()
+        }
+    }
+
+    // Tự động điền thông tin từ ruộng (chỉ chạy 1 lần khi farm được load)
+    LaunchedEffect(farmsState) {
+        val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
+        if (farm != null) {
+            if (variantName.isEmpty()) variantName = farm.varietyName
+
+            if (cropSeason.isEmpty()) {
+                try {
+                    farm.sowingDate?.let { date ->
+                        val calendar = java.util.Calendar.getInstance()
+                        calendar.time = date.toDate()
+                        val month = calendar.get(java.util.Calendar.MONTH) + 1
+                        cropSeason = when (month) {
+                            in 11..12, 1 -> "Đông Xuân"
+                            in 5..8 -> "Hè Thu"
+                            in 9..10 -> "Thu Đông"
+                            else -> "Mùa Vụ Khác"
+                        }
+                    } ?: run { cropSeason = "Đông Xuân" }
+                } catch (e: Exception) {
+                    cropSeason = "Đông Xuân"
+                }
+            }
+        }
+    }
 
     // --- Side effects ---
     LaunchedEffect(addHarvestState) {
@@ -63,6 +102,7 @@ fun AddHarvestScreen(
         }
     }
 
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -76,7 +116,7 @@ fun AddHarvestScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
                     }
                 }
             )

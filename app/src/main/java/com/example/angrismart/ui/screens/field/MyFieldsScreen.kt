@@ -93,6 +93,11 @@ fun MyFieldsScreen(
 
 @Composable
 fun FarmCard(farm: Farm, onClick: () -> Unit) {
+    val realAgeDays = farm.sowingDate?.let { date ->
+        val diffInMillies = System.currentTimeMillis() - date.toDate().time
+        java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
+    } ?: farm.ageDays
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -153,9 +158,9 @@ fun FarmCard(farm: Farm, onClick: () -> Unit) {
                         color = Color.White.copy(alpha = 0.8f)
                     ) {
                         Text(
-                            text = getStageName(farm.ageDays, farm.totalGrowthDays),
+                            text = getStageName(realAgeDays, farm.totalGrowthDays),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            color = getStageColor(farm.ageDays, farm.totalGrowthDays),
+                            color = getStageColor(realAgeDays, farm.totalGrowthDays),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -164,7 +169,7 @@ fun FarmCard(farm: Farm, onClick: () -> Unit) {
 
                 // Giai đoạn bằng text ở đáy
                 Text(
-                    text = "Đã sạ: ${farm.ageDays} / ${farm.totalGrowthDays} ngày",
+                    text = "Đã sạ: $realAgeDays / ${farm.totalGrowthDays} ngày",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF1B5E20),
                     fontWeight = FontWeight.Medium

@@ -58,4 +58,14 @@ class FieldRepositoryImpl(
             emit(Resource.Error(e.localizedMessage ?: "Cố lỗi khi lưu đồng ruộng!"))
         }
     }
+
+    override suspend fun updateFarm(farm: Farm): Flow<Resource<String>> = flow {
+        emit(Resource.Loading())
+        try {
+            firestore.collection("farms").document(farm.id).set(farm).await()
+            emit(Resource.Success("Cập nhật thành công"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.localizedMessage ?: "Lỗi khi cập nhật dữ liệu!"))
+        }
+    }
 }
