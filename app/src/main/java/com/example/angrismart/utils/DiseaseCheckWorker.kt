@@ -33,8 +33,8 @@ class DiseaseCheckWorker(
 
             // Gọi DB lấy mảng Cánh đồng
             val firestore = FirebaseFirestore.getInstance()
-            val snapshot = firestore.collection("farms")
-                .whereEqualTo("userId", userId)
+            val snapshot = firestore.collection("Fields")
+                .whereEqualTo("user_uid", userId)
                 .get().await()
                 
             val farms = snapshot.documents.mapNotNull { it.toObject(Farm::class.java) }

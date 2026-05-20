@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class FinancialTransactionViewModel(
-    private val repository: FinancialTransactionRepository
+    private val repository: FinancialTransactionRepository = com.example.angrismart.data.repository.FinancialTransactionRepositoryImpl()
 ) : ViewModel() {
 
     private val _transactions = MutableStateFlow<Resource<List<FinancialTransaction>>>(Resource.Loading())

@@ -9,9 +9,9 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.example.angrismart" />
-                  <option name="mobileSdkAppId" value="1:291360837720:android:f472a97633807d34d2fa2d" />
-                  <option name="projectId" value="angrismart" />
-                  <option name="projectNumber" value="291360837720" />
+                  <option name="mobileSdkAppId" value="1:484954593536:android:4bf6df4ef882f6a9723be5" />
+                  <option name="projectId" value="scanfordisease-62837" />
+                  <option name="projectNumber" value="484954593536" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

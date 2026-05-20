@@ -48,6 +48,16 @@ class AuthRepositoryImpl(
         }
     }
 
+    override suspend fun sendPasswordResetEmail(email: String): Flow<Resource<String>> = flow {
+        emit(Resource.Loading())
+        try {
+            auth.sendPasswordResetEmail(email).await()
+            emit(Resource.Success("Mã đặt lại mật khẩu đã được gửi tới Gmail của bạn!"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.localizedMessage ?: "Lỗi gửi email đặt lại mật khẩu"))
+        }
+    }
+
     override fun isUserLoggedIn(): Boolean = auth.currentUser != null
     override fun getCurrentUserId(): String? = auth.currentUser?.uid
     override fun logout() = auth.signOut()

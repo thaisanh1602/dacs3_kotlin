@@ -1,10 +1,10 @@
 package com.example.angrismart.domain.model
 
-import com.google.firebase.firestore.DocumentId
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
 
 data class FinancialTransaction(
-    @DocumentId val id: String = "",
+    val id: String = "",
     
     @get:PropertyName("field_id")
     @set:PropertyName("field_id")
@@ -22,5 +22,5 @@ data class FinancialTransaction(
     
     var note: String = "",
     
-    var date: String = ""
+    var date: Timestamp? = null
 )

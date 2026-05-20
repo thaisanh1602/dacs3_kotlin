@@ -40,7 +40,7 @@ class ChatViewModel : ViewModel() {
                 val response = RetrofitClient.apiService.sendChatMessage(ChatRequest(message = text))
                 
                 if (response.isSuccessful) {
-                    val reply = response.body()?.answer ?: "Xin lỗi, tôi không thể trả lời lúc này."
+                    val reply = response.body()?.reply ?: "Xin lỗi, tôi không thể trả lời lúc này."
                     _messages.value = _messages.value + ChatMessage(reply, isUser = false)
                 } else {
                     _messages.value = _messages.value + ChatMessage("Lỗi máy chủ AI: ${response.code()}", isUser = false)

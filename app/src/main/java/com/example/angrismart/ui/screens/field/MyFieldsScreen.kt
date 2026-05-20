@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,10 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Farm
+import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.ui.theme.GreenSecondary
 import com.example.angrismart.ui.theme.YellowWarning
@@ -37,7 +36,14 @@ fun MyFieldsScreen(
 ) {
     // Quan sát dòng chảy dữ liệu thực từ Firestore
     val farmsState by viewModel.farmsState.collectAsState()
+    val riceVariantsState by viewModel.riceVariantsState.collectAsState()
     val rawFarms = farmsState.data ?: emptyList()
+    val variants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadFarms()
+        viewModel.loadRiceVariants()
+    }
 
 
     Scaffold(
@@ -81,7 +87,8 @@ fun MyFieldsScreen(
                 }
             } else {
                 items(rawFarms) { farm ->
-                    FarmCard(farm = farm, onClick = { onNavigateToFieldDetail(farm.id) })
+                    val variantName = variants.find { it.id == farm.varietyId }?.name ?: farm.varietyId
+                    FarmCard(farm = farm, variantName = variantName, onClick = { onNavigateToFieldDetail(farm.id) })
                 }
             }
 
@@ -92,7 +99,12 @@ fun MyFieldsScreen(
 }
 
 @Composable
-fun FarmCard(farm: Farm, onClick: () -> Unit) {
+fun FarmCard(farm: Farm, variantName: String, onClick: () -> Unit) {
+    val realAgeDays = farm.sowingDate?.let { date ->
+        val diffInMillies = System.currentTimeMillis() - date.toDate().time
+        java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
+    } ?: farm.ageDays
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -140,7 +152,7 @@ fun FarmCard(farm: Farm, onClick: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Giống: ${farm.varietyName} • ${farm.areaM2} m²",
+                            text = "Giống: $variantName • ${farm.areaM2} m²",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF2E7D32),
                             fontWeight = FontWeight.SemiBold
@@ -153,9 +165,9 @@ fun FarmCard(farm: Farm, onClick: () -> Unit) {
                         color = Color.White.copy(alpha = 0.8f)
                     ) {
                         Text(
-                            text = getStageName(farm.ageDays, farm.totalGrowthDays),
+                            text = getStageName(realAgeDays, farm.totalGrowthDays),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            color = getStageColor(farm.ageDays, farm.totalGrowthDays),
+                            color = getStageColor(realAgeDays, farm.totalGrowthDays),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -164,7 +176,7 @@ fun FarmCard(farm: Farm, onClick: () -> Unit) {
 
                 // Giai đoạn bằng text ở đáy
                 Text(
-                    text = "Đã sạ: ${farm.ageDays} / ${farm.totalGrowthDays} ngày",
+                    text = "Đã sạ: $realAgeDays / ${farm.totalGrowthDays} ngày",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF1B5E20),
                     fontWeight = FontWeight.Medium
@@ -176,7 +188,8 @@ fun FarmCard(farm: Farm, onClick: () -> Unit) {
 
 // Hàm tính tự động Giai đoạn trưởng thành của lúa
 fun getStageName(ageDays: Int, totalDays: Int): String {
-    val progress = ageDays.toFloat() / totalDays.toFloat()
+    val safeTotal = if (totalDays > 0) totalDays else 100
+    val progress = ageDays.toFloat() / safeTotal.toFloat()
     return when {
         progress < 0.2f -> "Mạ non"
         progress < 0.5f -> "Đẻ nhánh"
@@ -187,7 +200,8 @@ fun getStageName(ageDays: Int, totalDays: Int): String {
 }
 
 fun getStageColor(ageDays: Int, totalDays: Int): Color {
-    val progress = ageDays.toFloat() / totalDays.toFloat()
+    val safeTotal = if (totalDays > 0) totalDays else 100
+    val progress = ageDays.toFloat() / safeTotal.toFloat()
     return when {
         progress < 0.5f -> GreenSecondary
         progress < 0.8f -> GreenPrimary

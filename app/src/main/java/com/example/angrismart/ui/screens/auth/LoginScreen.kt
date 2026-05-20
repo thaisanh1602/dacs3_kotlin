@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,12 +25,18 @@ import com.example.angrismart.viewmodel.AuthViewModel
 fun LoginScreen(
     viewModel: AuthViewModel = viewModel(),
     onLoginSuccess: (String) -> Unit = {},
-    onNavigateToRegister: () -> Unit = {}
+    onNavigateToRegister: () -> Unit = {},
+    onNavigateToForgotPassword: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf(TextFieldValue("")) }
     var password by remember { mutableStateOf(TextFieldValue("")) }
     val authState by viewModel.authState.collectAsState()
     var successMessage by remember { mutableStateOf("") }
+
+    // Xóa lỗi khi mở lại màn hình
+    LaunchedEffect(Unit) {
+        viewModel.resetState()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -96,7 +103,23 @@ fun LoginScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onNavigateToForgotPassword,
+                    enabled = authState !is Resource.Loading
+                ) {
+                    Text(
+                        text = "Quên mật khẩu?",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = { viewModel.login(email.text, password.text) },
@@ -143,9 +166,14 @@ fun LoginScreen(
             LaunchedEffect(authState) {
                 if (authState is Resource.Success) {
                     val uid = authState!!.data
-                    if (uid == "REQUIRE_VERIFICATION") {
-                        // Hiện thông báo, không văng vào app
-                        successMessage = "✉️ Đăng ký thành công!\nVui lòng truy cập hộp thư Gmail của bạn để bấm link kích hoạt."
+                    if (uid == "REQUIRE_VERIFICATION" || uid?.contains("Mã đặt lại") == true) {
+                        // Nếu là message success từ Forgot Password (trong TH quay lại screen này)
+                        // hoặc Require Verification thì hiện message
+                        if (uid != "REQUIRE_VERIFICATION") {
+                            successMessage = uid ?: ""
+                        } else {
+                            successMessage = "✉️ Đăng ký thành công!\nVui lòng truy cập hộp thư Gmail của bạn để bấm link kích hoạt."
+                        }
                         viewModel.resetState()
                     } else {
                         // Thành công đăng nhập

@@ -1,17 +1,20 @@
 package com.example.angrismart.ui.screens.field
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import java.util.Calendar
+import java.util.Date
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,14 +24,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Farm
+import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.ui.theme.GreenSecondary
 import com.example.angrismart.ui.theme.YellowWarning
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.*
+import com.example.angrismart.viewmodel.FinancialTransactionViewModel
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,10 +41,39 @@ fun FieldDetailScreen(
     viewModel: FieldViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
-    onNavigateToAddTransaction: () -> Unit = {}
+    onNavigateToAddHarvest: () -> Unit = {},
+    onNavigateToAddTransaction: () -> Unit = {},
+    transactionViewModel: FinancialTransactionViewModel = viewModel()
 ) {
     val farmsState by viewModel.farmsState.collectAsState()
+    val riceVariantsState by viewModel.riceVariantsState.collectAsState()
+    
     val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
+    val variants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
+    val variantName = variants.find { it.id == farm?.varietyId }?.name ?: farm?.varietyId ?: "---"
+
+    // Tải chi phí
+    val transactionsState by transactionViewModel.transactions.collectAsState()
+    LaunchedEffect(fieldId) {
+        if (fieldId.isNotEmpty()) {
+            transactionViewModel.getTransactionsByField(fieldId)
+        }
+    }
+
+    val totalExpense = remember(transactionsState) {
+        if (transactionsState is Resource.Success) {
+            transactionsState.data?.filter { it.type == "expense" }?.sumOf { it.price } ?: 0.0
+        } else 0.0
+    }
+
+    val vndFormat = remember {
+        NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"))
+    }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = farm?.sowingDate?.toDate()?.time ?: System.currentTimeMillis()
+    )
 
     Scaffold(
         topBar = {
@@ -49,15 +82,40 @@ fun FieldDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Sửa */ }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Sửa", tint = Color.White)
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Cập nhật ngày gieo", tint = Color.White)
                     }
                 }
             )
+
+            if (showDatePicker) {
+                DatePickerDialog(
+                    onDismissRequest = { showDatePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                farm?.let { f ->
+                                    viewModel.updateSowingDate(f, com.google.firebase.Timestamp(Date(millis)))
+                                }
+                            }
+                            showDatePicker = false
+                        }) {
+                            Text("XÁC NHẬN")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDatePicker = false }) {
+                            Text("HỦY")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
         }
     ) { paddingValues ->
         if (farm == null) {
@@ -79,38 +137,31 @@ fun FieldDetailScreen(
                 .padding(16.dp)
         ) {
             // Thẻ Thông tin chính
-            InfoCard(farm)
-
-            // Thẻ Vị trí Bản Đồ (Google Maps View)
-            val lat = farm.latitude
-            val lng = farm.longitude
-            if (lat != null && lng != null) {
-                Spacer(modifier = Modifier.height(24.dp))
-                FieldMapLocation(lat, lng, farm.farmName)
-            }
+            InfoCard(farm!!, variantName, totalExpense, vndFormat)
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Thẻ Tiến độ mùa vụ
-            GrowthProgressCard(farm)
+            GrowthProgressCard(farm) {
+                showDatePicker = true
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Thẻ Hành động chính
-            MainActions(onNavigateToScan, onNavigateToAddTransaction)
+            MainActions(
+                onNavigateToScan = onNavigateToScan,
+                onNavigateToAddHarvest = onNavigateToAddHarvest,
+                onNavigateToAddTransaction = onNavigateToAddTransaction
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Lịch sử & Báo cáo (Placeholders)
-            HistorySection()
-            
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-fun InfoCard(farm: Farm) {
+fun InfoCard(farm: Farm, variantName: String, totalExpense: Double, vndFormat: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -123,11 +174,11 @@ fun InfoCard(farm: Farm) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "Thông tin thửa ruộng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
-            
-            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
 
-            DetailItem("Giống lúa", farm.varietyName, "🌱")
+            DetailItem("Giống lúa", variantName, "🌱")
             DetailItem("Diện tích", "${farm.areaM2} m²", "📐")
+            DetailItem("Chi phí đã chi", "${vndFormat.format(totalExpense)} đ", "💰")
             DetailItem("Tình trạng", if(farm.status == "active") "Đang canh tác" else "Đã thu hoạch", "✅")
         }
     }
@@ -150,10 +201,16 @@ fun DetailItem(label: String, value: String, icon: String) {
 }
 
 @Composable
-fun GrowthProgressCard(farm: Farm) {
-    val progress = (farm.ageDays.toFloat() / farm.totalGrowthDays.toFloat()).coerceIn(0f, 1f)
-    val stageName = getStageName(farm.ageDays, farm.totalGrowthDays)
-    val stageColor = getStageColor(farm.ageDays, farm.totalGrowthDays)
+fun GrowthProgressCard(farm: Farm, onUpdateClick: () -> Unit) {
+    val realAgeDays = farm.sowingDate?.let { date ->
+        val diffInMillies = System.currentTimeMillis() - date.toDate().time
+        java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
+    } ?: farm.ageDays
+
+    val totalDays = if (farm.totalGrowthDays > 0) farm.totalGrowthDays else 100
+    val progress = (realAgeDays.toFloat() / totalDays.toFloat()).coerceIn(0f, 1f)
+    val stageName = getStageName(realAgeDays, farm.totalGrowthDays)
+    val stageColor = getStageColor(realAgeDays, farm.totalGrowthDays)
     
     val stages = listOf("Mạ non", "Đẻ nhánh", "Làm đòng", "Chín", "Thu hoạch")
     val currentStageIndex = when {
@@ -179,15 +236,22 @@ fun GrowthProgressCard(farm: Farm) {
                 Text(text = "Dòng thời gian lúa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = stageColor.copy(alpha = 0.15f)
+                    color = stageColor.copy(alpha = 0.15f),
+                    modifier = Modifier.clickable { onUpdateClick() }
                 ) {
-                    Text(
-                        text = "Ngày thứ ${farm.ageDays}",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        color = stageColor,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "Ngày thứ $realAgeDays",
+                            color = stageColor,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = stageColor)
+                    }
                 }
             }
 
@@ -265,7 +329,11 @@ fun GrowthProgressCard(farm: Farm) {
 }
 
 @Composable
-fun MainActions(onNavigateToScan: () -> Unit, onNavigateToAddTransaction: () -> Unit) {
+fun MainActions(
+    onNavigateToScan: () -> Unit,
+    onNavigateToAddHarvest: () -> Unit = {},
+    onNavigateToAddTransaction: () -> Unit = {}
+) {
     Column {
         Text(
             text = "Hành động nhanh",
@@ -273,25 +341,39 @@ fun MainActions(onNavigateToScan: () -> Unit, onNavigateToAddTransaction: () -> 
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp)
         )
-        
+
+        // Nút quét sâu bệnh
         Button(
             onClick = onNavigateToScan,
-            modifier = Modifier.fillMaxWidth().height(72.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
         ) {
             Text("🔍 QUÉT SÂU BỆNH CHO RUỘNG NÀY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
+        // Nút ghi thu hoạch
         Button(
-            onClick = onNavigateToAddTransaction,
-            modifier = Modifier.fillMaxWidth().height(72.dp),
+            onClick = onNavigateToAddHarvest,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
+            colors = ButtonDefaults.buttonColors(containerColor = YellowWarning)
         ) {
-            Text("💰 THÊM KHOẢN THU / CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("📦 GHI NHẬN THU HOẠCH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFF3E2723))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Nút thêm thu chi
+        OutlinedButton(
+            onClick = onNavigateToAddTransaction,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(2.dp, GreenPrimary)
+        ) {
+            Text("💰 THÊM KHOẢN CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
         }
     }
 }
@@ -328,40 +410,6 @@ fun HistorySection() {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Chưa có lịch sử quét nào cho ruộng này", color = Color.Gray)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun FieldMapLocation(lat: Double, lng: Double, name: String) {
-    Column {
-        Text(
-            text = "Vị trí địa lý",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        
-        Card(
-            modifier = Modifier.fillMaxWidth().height(250.dp),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            val position = LatLng(lat, lng)
-            val cameraState = rememberCameraPositionState {
-                this.position = CameraPosition.fromLatLngZoom(position, 16f)
-            }
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraState,
-                uiSettings = MapUiSettings(zoomControlsEnabled = false, scrollGesturesEnabled = false, tiltGesturesEnabled = false, rotationGesturesEnabled = false)
-            ) {
-                Marker(
-                    state = MarkerState(position = position),
-                    title = name,
-                    snippet = "Tọa độ: $lat, $lng"
-                )
             }
         }
     }

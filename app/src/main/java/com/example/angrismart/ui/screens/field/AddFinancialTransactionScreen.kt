@@ -1,12 +1,18 @@
 package com.example.angrismart.ui.screens.field
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,23 +37,14 @@ fun AddFinancialTransactionScreen(
     onNavigateBack: () -> Unit,
     onSaveSuccess: () -> Unit
 ) {
-    val repository = remember { FinancialTransactionRepositoryImpl() }
-    val viewModel: FinancialTransactionViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return FinancialTransactionViewModel(repository) as T
-            }
-        }
-    )
+    val viewModel: FinancialTransactionViewModel = viewModel()
 
-    var type by remember { mutableStateOf("expense") } // 'expense' or 'income'
+    val categoryOptions = listOf("Mua phân bón", "Mua thuốc trừ sâu", "Thuê nhân công", "Thuê máy móc", "Khác")
     var category by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("2026-04-10T15:30:00Z") } // TODO: Use date picker
     var expanded by remember { mutableStateOf(false) }
-
-    val categories = if (type == "expense") listOf("Mua phân bón", "Mua thuốc trừ sâu", "Thuê nhân công", "Thuê máy móc", "Khác") else listOf("Bán lúa", "Trợ cấp", "Khác")
 
     val addStatus by viewModel.addTransactionStatus.collectAsState()
     val scrollState = rememberScrollState()
@@ -62,11 +59,11 @@ fun AddFinancialTransactionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Thêm Thu/Chi", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text("Thêm Chi phí", color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Trở về", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Trở về", tint = Color.White)
                     }
                 }
             )
@@ -79,32 +76,13 @@ fun AddFinancialTransactionScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-            // Loại giao dịch
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = { type = "expense"; category = "" },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (type == "expense") RedError else Color.LightGray,
-                        contentColor = if (type == "expense") Color.White else Color.Black
-                    )
-                ) {
-                    Text("Khoản Chi")
-                }
-                Button(
-                    onClick = { type = "income"; category = "" },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (type == "income") GreenPrimary else Color.LightGray,
-                        contentColor = if (type == "income") Color.White else Color.Black
-                    )
-                ) {
-                    Text("Khoản Thu")
-                }
-            }
+            Text(
+                text = "💰 Nhập Khoản Chi",
+                style = MaterialTheme.typography.titleLarge,
+                color = RedError,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
             // Danh mục
             ExposedDropdownMenuBox(
@@ -118,14 +96,14 @@ fun AddFinancialTransactionScreen(
                     label = { Text("Danh mục") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(focusedBorderColor = GreenPrimary),
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth().height(68.dp),
+                    modifier = Modifier.menuAnchor().fillMaxWidth().height(68.dp),
                     shape = RoundedCornerShape(12.dp)
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    categories.forEach { selectionOption ->
+                    categoryOptions.forEach { selectionOption ->
                         DropdownMenuItem(
                             text = { Text(selectionOption) },
                             onClick = {
@@ -191,14 +169,23 @@ fun AddFinancialTransactionScreen(
                 onClick = {
                     val priceDouble = price.toDoubleOrNull()
                     if (category.isNotBlank() && priceDouble != null) {
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+                        val timestamp = try {
+                            val parsedDate = dateFormat.parse(date)
+                            if (parsedDate != null) Timestamp(parsedDate) else Timestamp.now()
+                        } catch (e: Exception) {
+                            Timestamp.now()
+                        }
+
                         val transaction = FinancialTransaction(
                             fieldId = fieldId,
-                            userUid = "debug_user_123", // TODO: Get from auth
-                            type = type,
+                            userUid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+                            type = "expense",
                             category = category,
                             price = priceDouble,
                             note = note,
-                            date = date
+                            date = timestamp
                         )
                         viewModel.addTransaction(transaction)
                     }
