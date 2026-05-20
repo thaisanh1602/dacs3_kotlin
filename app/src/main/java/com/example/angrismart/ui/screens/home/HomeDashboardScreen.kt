@@ -30,7 +30,6 @@ import com.example.angrismart.ui.theme.YellowWarning
 import com.example.angrismart.ui.theme.BackgroundLight
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.WeatherViewModel
-import com.example.angrismart.viewmodel.HarvestViewModel
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,13 +50,10 @@ fun HomeDashboardScreen(
     onNavigateToScan: () -> Unit = {},
     onNavigateToWeather: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
-    onNavigateToProfit: () -> Unit = {},
-    harvestViewModel: HarvestViewModel = viewModel()
+    onNavigateToProfit: () -> Unit = {}
 ) {
     val weatherState by weatherViewModel.currentWeather.collectAsState()
     val diseaseRisk by weatherViewModel.diseaseRisk.collectAsState()
-    
-    val harvestState by harvestViewModel.harvestListState.collectAsState()
     
     val context = LocalContext.current
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
@@ -84,8 +80,6 @@ fun HomeDashboardScreen(
     }
 
     LaunchedEffect(Unit) {
-        harvestViewModel.loadHarvestsByUser()
-        
         // Location logic
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
@@ -116,12 +110,9 @@ fun HomeDashboardScreen(
         }
     }
     
-    val harvests = (harvestState as? Resource.Success)?.data ?: emptyList()
-    val totalProfit = harvests.sumOf { it.profit }
-    val totalRevenue = harvests.sumOf { it.totalRevenue }
-    val totalExpense = harvests.sumOf { it.totalExpense }
-    val vndFormat = java.text.NumberFormat.getNumberInstance(java.util.Locale("vi", "VN"))
-    
+    // Định dạng tiền tệ VN
+    val vndFormat = NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"))
+
     val scrollState = rememberScrollState()
 
     Scaffold(
@@ -154,17 +145,6 @@ fun HomeDashboardScreen(
                     }
                 }
 
-                // Global Profit Summary Card
-                Spacer(modifier = Modifier.height(16.dp))
-                val vndFormatLocale = NumberFormat.getNumberInstance(Locale.Builder().setLanguage("vi").setRegion("VN").build())
-                HomeProfitSummaryCard(
-                    totalRevenue = totalRevenue,
-                    totalExpense = totalExpense,
-                    totalProfit = totalProfit,
-                    harvestCount = harvests.size,
-                    vndFormat = vndFormatLocale,
-                    onClick = onNavigateToProfit
-                )
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
@@ -368,129 +348,7 @@ fun WeatherCard(weatherState: Resource<com.example.angrismart.data.remote.model.
     }
 }
 
-@Composable
-fun HomeProfitSummaryCard(
-    totalRevenue: Double,
-    totalExpense: Double,
-    totalProfit: Double,
-    harvestCount: Int,
-    vndFormat: java.text.NumberFormat,
-    onClick: () -> Unit = {}
-) {
-    val isProfitable = totalProfit >= 0
-    val gradientColors = if (isProfitable)
-        listOf(Color(0xFF1B5E20), Color(0xFF388E3C))
-    else
-        listOf(Color(0xFF880E4F), Color(0xFFC62828))
 
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(colors = gradientColors))
-                .padding(24.dp)
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "💰 Tổng kết Lợi Nhuận",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Medium
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color.White.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            text = "$harvestCount vụ thu hoạch",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Doanh thu & Chi phí
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    HomeSummaryStatColumn(
-                        label = "📈 Tổng doanh thu",
-                        value = "${vndFormat.format(totalRevenue.toLong())} đ",
-                        valueColor = Color.White
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(48.dp)
-                            .background(Color.White.copy(alpha = 0.3f))
-                    )
-                    HomeSummaryStatColumn(
-                        label = "📉 Tổng chi phí",
-                        value = "${vndFormat.format(totalExpense.toLong())} đ",
-                        valueColor = Color.White.copy(alpha = 0.85f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Lợi nhuận tổng
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isProfitable) "✅ Lợi nhuận" else "❌ Lỗ vốn",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${if (totalProfit >= 0) "+" else ""}${vndFormat.format(totalProfit.toLong())} đ",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun HomeSummaryStatColumn(label: String, value: String, valueColor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.75f),
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = valueColor,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-    }
-}
 
 @Composable
 fun AlertBanner(message: String, onClick: () -> Unit) {

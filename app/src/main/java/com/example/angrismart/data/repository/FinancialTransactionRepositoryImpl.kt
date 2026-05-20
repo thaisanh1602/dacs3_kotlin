@@ -1,5 +1,6 @@
 package com.example.angrismart.data.repository
 
+import android.util.Log
 import com.example.angrismart.domain.model.FinancialTransaction
 import com.example.angrismart.domain.repository.FinancialTransactionRepository
 import com.example.angrismart.utils.Resource
@@ -27,7 +28,12 @@ class FinancialTransactionRepositoryImpl(
 
                 if (snapshot != null) {
                     val transactions = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(FinancialTransaction::class.java)
+                        try {
+                            doc.toObject(FinancialTransaction::class.java)
+                        } catch (e: Exception) {
+                            Log.e("FinancialRepo", "Error parsing transaction: ${e.message}")
+                            null
+                        }
                     }
                     trySend(Resource.Success(transactions))
                 } else {

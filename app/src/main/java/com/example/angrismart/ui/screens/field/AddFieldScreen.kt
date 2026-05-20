@@ -180,7 +180,7 @@ fun AddFieldScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(350.dp)
+                    .weight(1f)
             ) {
                 com.google.maps.android.compose.GoogleMap(
                     modifier = Modifier.fillMaxSize(),

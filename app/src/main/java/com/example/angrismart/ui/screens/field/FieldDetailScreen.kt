@@ -24,11 +24,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Farm
+import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.ui.theme.GreenSecondary
 import com.example.angrismart.ui.theme.YellowWarning
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
+import com.example.angrismart.viewmodel.FinancialTransactionViewModel
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,10 +42,33 @@ fun FieldDetailScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
     onNavigateToAddHarvest: () -> Unit = {},
-    onNavigateToAddTransaction: () -> Unit = {}
+    onNavigateToAddTransaction: () -> Unit = {},
+    transactionViewModel: FinancialTransactionViewModel = viewModel()
 ) {
     val farmsState by viewModel.farmsState.collectAsState()
+    val riceVariantsState by viewModel.riceVariantsState.collectAsState()
+    
     val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
+    val variants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
+    val variantName = variants.find { it.id == farm?.varietyId }?.name ?: farm?.varietyId ?: "---"
+
+    // Tải chi phí
+    val transactionsState by transactionViewModel.transactions.collectAsState()
+    LaunchedEffect(fieldId) {
+        if (fieldId.isNotEmpty()) {
+            transactionViewModel.getTransactionsByField(fieldId)
+        }
+    }
+
+    val totalExpense = remember(transactionsState) {
+        if (transactionsState is Resource.Success) {
+            transactionsState.data?.filter { it.type == "expense" }?.sumOf { it.price } ?: 0.0
+        } else 0.0
+    }
+
+    val vndFormat = remember {
+        NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"))
+    }
 
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
@@ -110,7 +137,7 @@ fun FieldDetailScreen(
                 .padding(16.dp)
         ) {
             // Thẻ Thông tin chính
-            InfoCard(farm)
+            InfoCard(farm!!, variantName, totalExpense, vndFormat)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -134,7 +161,7 @@ fun FieldDetailScreen(
 }
 
 @Composable
-fun InfoCard(farm: Farm) {
+fun InfoCard(farm: Farm, variantName: String, totalExpense: Double, vndFormat: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -149,8 +176,9 @@ fun InfoCard(farm: Farm) {
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
 
-            DetailItem("Giống lúa", farm.varietyName, "🌱")
+            DetailItem("Giống lúa", variantName, "🌱")
             DetailItem("Diện tích", "${farm.areaM2} m²", "📐")
+            DetailItem("Chi phí đã chi", "${vndFormat.format(totalExpense)} đ", "💰")
             DetailItem("Tình trạng", if(farm.status == "active") "Đang canh tác" else "Đã thu hoạch", "✅")
         }
     }
@@ -179,7 +207,8 @@ fun GrowthProgressCard(farm: Farm, onUpdateClick: () -> Unit) {
         java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
     } ?: farm.ageDays
 
-    val progress = (realAgeDays.toFloat() / farm.totalGrowthDays.toFloat()).coerceIn(0f, 1f)
+    val totalDays = if (farm.totalGrowthDays > 0) farm.totalGrowthDays else 100
+    val progress = (realAgeDays.toFloat() / totalDays.toFloat()).coerceIn(0f, 1f)
     val stageName = getStageName(realAgeDays, farm.totalGrowthDays)
     val stageColor = getStageColor(realAgeDays, farm.totalGrowthDays)
     
@@ -344,7 +373,7 @@ fun MainActions(
             shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(2.dp, GreenPrimary)
         ) {
-            Text("💰 THÊM KHOẢN THU / CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
+            Text("💰 THÊM KHOẢN CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
         }
     }
 }

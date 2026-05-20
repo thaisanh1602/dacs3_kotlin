@@ -1,5 +1,11 @@
 package com.example.angrismart.ui.screens.field
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,7 +59,7 @@ fun AddFinancialTransactionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Thêm Thu/Chi", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text("Thêm Chi phí", color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -163,14 +169,23 @@ fun AddFinancialTransactionScreen(
                 onClick = {
                     val priceDouble = price.toDoubleOrNull()
                     if (category.isNotBlank() && priceDouble != null) {
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+                        val timestamp = try {
+                            val parsedDate = dateFormat.parse(date)
+                            if (parsedDate != null) Timestamp(parsedDate) else Timestamp.now()
+                        } catch (e: Exception) {
+                            Timestamp.now()
+                        }
+
                         val transaction = FinancialTransaction(
                             fieldId = fieldId,
-                            userUid = "debug_user_123", // TODO: Get from auth
+                            userUid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
                             type = "expense",
                             category = category,
                             price = priceDouble,
                             note = note,
-                            date = date
+                            date = timestamp
                         )
                         viewModel.addTransaction(transaction)
                     }

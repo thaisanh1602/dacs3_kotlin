@@ -1,5 +1,6 @@
 package com.example.angrismart.data.repository
 
+import android.util.Log
 import com.example.angrismart.domain.model.Farm
 import com.example.angrismart.domain.repository.FieldRepository
 import com.example.angrismart.utils.Resource
@@ -18,8 +19,8 @@ class FieldRepositoryImpl(
     override fun getFarms(userId: String): Flow<Resource<List<Farm>>> = callbackFlow {
         trySend(Resource.Loading()) // Gửi cờ báo đang tải
 
-        val subscription = firestore.collection("farms")
-            .whereEqualTo("userId", userId)
+        val subscription = firestore.collection("Fields")
+            .whereEqualTo("user_uid", userId)
             // Lắng nghe liên tục
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -29,7 +30,12 @@ class FieldRepositoryImpl(
 
                 if (snapshot != null) {
                     val farms = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(Farm::class.java) // Chuyển Data Firestore sang Data class Kotlin
+                        try {
+                            doc.toObject(Farm::class.java)
+                        } catch (e: Exception) {
+                            Log.e("FieldRepo", "Error parsing farm: ${e.message}")
+                            null
+                        }
                     }
                     trySend(Resource.Success(farms))
                 } else {
@@ -44,12 +50,13 @@ class FieldRepositoryImpl(
     override suspend fun addFarm(farm: Farm): Flow<Resource<String>> = flow {
         emit(Resource.Loading())
         try {
-            // Firestore tự sình ID
-            val docRef = firestore.collection("farms").document()
+            // Firestore tự sinh ID
+            val docRef = firestore.collection("Fields").document()
             
             // Xoá ID null và nạp ID do Firebase cấp
             val newFarm = farm.copy(id = docRef.id) 
             
+            // Nếu có latitude/longitude thì chuyển thành map location trước khi lưu (nếu cần, nhưng Farm đã có location map)
             // Đẩy dữ liệu lên
             docRef.set(newFarm).await()
 
@@ -62,7 +69,7 @@ class FieldRepositoryImpl(
     override suspend fun updateFarm(farm: Farm): Flow<Resource<String>> = flow {
         emit(Resource.Loading())
         try {
-            firestore.collection("farms").document(farm.id).set(farm).await()
+            firestore.collection("Fields").document(farm.id).set(farm).await()
             emit(Resource.Success("Cập nhật thành công"))
         } catch (e: Exception) {
             emit(Resource.Error(e.localizedMessage ?: "Lỗi khi cập nhật dữ liệu!"))

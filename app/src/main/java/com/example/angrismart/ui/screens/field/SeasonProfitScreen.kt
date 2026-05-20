@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Harvest
+import com.example.angrismart.domain.model.RiceVariant
+import com.example.angrismart.domain.model.SeasonTemplate
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.HarvestViewModel
@@ -35,11 +37,19 @@ fun SeasonProfitScreen(
     onNavigateToAddHarvest: () -> Unit = {}
 ) {
     val harvestState by harvestViewModel.harvestListState.collectAsState()
-    val vndFormat = NumberFormat.getNumberInstance(Locale.Builder().setLanguage("vi").setRegion("VN").build())
+    val riceVariantsState by harvestViewModel.riceVariantsState.collectAsState()
+    val seasonTemplatesState by harvestViewModel.seasonTemplatesState.collectAsState()
+    
+    val riceVariants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
+    val seasons: List<SeasonTemplate> = seasonTemplatesState.data ?: emptyList()
+    
+    val vndFormat = remember { NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN")) }
 
     // Khi màn hình mở, load dữ liệu thu hoạch TOÀN BỘ của user
     LaunchedEffect(Unit) {
         harvestViewModel.loadHarvestsByUser()
+        harvestViewModel.loadRiceVariants()
+        harvestViewModel.loadSeasonTemplates()
     }
 
     val harvests = (harvestState as? Resource.Success)?.data ?: emptyList()
@@ -106,7 +116,7 @@ fun SeasonProfitScreen(
                     } else {
                         // --- Biểu đồ cột ---
                         item {
-                            ProfitBarChart(harvests = harvests)
+                            ProfitBarChart(harvests = harvests, seasons = seasons)
                         }
 
                         item {
@@ -118,7 +128,9 @@ fun SeasonProfitScreen(
                             )
                         }
                         items(harvests) { harvest ->
-                            HarvestItemCard(harvest, vndFormat)
+                            val riceName = riceVariants.find { it.id == harvest.variantId }?.name ?: harvest.variantId
+                            val seasonName = seasons.find { it.id == harvest.seasonId }?.seasonName ?: harvest.seasonId
+                            HarvestItemCard(harvest, riceName, seasonName, vndFormat)
                         }
                     }
                 }
@@ -255,7 +267,7 @@ private fun SummaryStatColumn(label: String, value: String, valueColor: Color) {
 }
 
 @Composable
-private fun HarvestItemCard(harvest: Harvest, vndFormat: NumberFormat) {
+private fun HarvestItemCard(harvest: Harvest, riceName: String, seasonName: String, vndFormat: NumberFormat) {
     val isProfitable = harvest.profit >= 0
     val profitColor = if (isProfitable) Color(0xFF2E7D32) else Color(0xFFC62828)
     val profitBgColor = if (isProfitable) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
@@ -280,12 +292,12 @@ private fun HarvestItemCard(harvest: Harvest, vndFormat: NumberFormat) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = harvest.cropSeason,
+                        text = seasonName,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "🌾 ${harvest.variantName}  •  📅 $dateStr",
+                        text = "🌾 $riceName  •  📅 $dateStr",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )
@@ -373,23 +385,25 @@ private fun EmptyHarvestPlaceholder(onAdd: () -> Unit) {
 }
 
 @Composable
-fun ProfitBarChart(harvests: List<Harvest>, modifier: Modifier = Modifier) {
+fun ProfitBarChart(harvests: List<Harvest>, seasons: List<com.example.angrismart.domain.model.SeasonTemplate>, modifier: Modifier = Modifier) {
     if (harvests.isEmpty()) return
 
-    // Sort by date to show timeline
-    val sortedHarvests = harvests.sortedBy { it.harvestDate }.takeLast(6)
-    val maxAbsValue = sortedHarvests.maxOfOrNull { Math.abs(it.profit) } ?: 1.0
-    val range = maxAbsValue * 1.2 // Thêm khoảng trống ở trên cùng
+    // Sắp xếp theo ngày và lấy tối đa 6 vụ gần nhất (Sử dụng seconds để tránh crash nếu date null)
+    val sortedHarvests = harvests.sortedBy { it.harvestDate?.seconds ?: 0L }.takeLast(6)
+    val maxAbsValue = sortedHarvests.maxOfOrNull { Math.abs(it.profit) } ?: 0.0
+    val range = if (maxAbsValue > 0) maxAbsValue * 1.5 else 1.0 // Tránh chia cho 0
+
+    val vndFormatShort = remember { NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN")) }
 
     Card(
-        modifier = modifier.fillMaxWidth().height(200.dp),
+        modifier = modifier.fillMaxWidth().height(240.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Biểu đồ Lợi nhuận (6 vụ gần nhất)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -398,23 +412,46 @@ fun ProfitBarChart(harvests: List<Harvest>, modifier: Modifier = Modifier) {
             ) {
                 sortedHarvests.forEach { harvest ->
                     val isPositive = harvest.profit >= 0
-                    val fraction = (Math.abs(harvest.profit) / range).toFloat().coerceIn(0.01f, 1f)
+                    val fraction = (Math.abs(harvest.profit) / range).toFloat().coerceIn(0.05f, 0.8f)
                     val barColor = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336)
-                    val seasonAbbr = harvest.cropSeason.split(" ").map { it.firstOrNull()?.uppercase() ?: "" }.joinToString("").take(4)
+                    
+                    val fullName = seasons.find { it.id == harvest.seasonId }?.seasonName ?: harvest.seasonId
+                    val seasonAbbr = fullName.split(" ").map { it.firstOrNull()?.uppercase() ?: "" }.joinToString("").take(4)
+                    
+                    // Rút gọn số tiền hiển thị trên cột (ví dụ: 1.2M hoặc 500k)
+                    val profitValue = harvest.profit
+                    val displayValue = when {
+                        Math.abs(profitValue) >= 1_000_000 -> "${(profitValue / 1_000_000).toInt()}Tr"
+                        Math.abs(profitValue) >= 1_000 -> "${(profitValue / 1_000).toInt()}k"
+                        else -> "${profitValue.toInt()}"
+                    }
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom,
                         modifier = Modifier.weight(1f).fillMaxHeight()
                     ) {
+                        // Giá trị tiền trên đầu cột
+                        Text(
+                            text = "${if (isPositive) "+" else ""}$displayValue",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = barColor,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         // Thanh cột
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(0.5f)
+                                .fillMaxWidth(0.4f)
                                 .fillMaxHeight(fraction)
                                 .background(barColor, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                         )
+                        
                         Spacer(modifier = Modifier.height(6.dp))
+                        
                         // Nhãn mùa vụ
                         Text(
                             text = seasonAbbr,

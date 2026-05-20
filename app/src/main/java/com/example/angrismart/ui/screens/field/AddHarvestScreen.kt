@@ -21,8 +21,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.ui.theme.GreenPrimary
 import com.example.angrismart.utils.Resource
+import com.example.angrismart.domain.model.Harvest
+import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.viewmodel.HarvestViewModel
 import com.example.angrismart.viewmodel.FieldViewModel
+import com.example.angrismart.viewmodel.FinancialTransactionViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -32,6 +35,7 @@ fun AddHarvestScreen(
     fieldId: String,
     harvestViewModel: HarvestViewModel = viewModel(),
     fieldViewModel: FieldViewModel = viewModel(),
+    transactionViewModel: FinancialTransactionViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onSaveSuccess: () -> Unit = {}
 ) {
@@ -49,7 +53,7 @@ fun AddHarvestScreen(
     val previewProfit = previewRevenue - (totalExpense.toDoubleOrNull() ?: 0.0)
 
     val vndFormat = remember {
-        NumberFormat.getNumberInstance(Locale.Builder().setLanguage("vi").setRegion("VN").build())
+        NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"))
     }
 
     // Chỉ dùng FieldViewModel để tự động điền thông tin giống lúa và vụ mùa
@@ -58,14 +62,39 @@ fun AddHarvestScreen(
     LaunchedEffect(fieldId) {
         if (fieldId.isNotEmpty()) {
             fieldViewModel.loadFarms()
+            transactionViewModel.getTransactionsByField(fieldId)
         }
     }
 
-    // Tự động điền thông tin từ ruộng (chỉ chạy 1 lần khi farm được load)
-    LaunchedEffect(farmsState) {
+    // Tự động tính toán tổng chi phí từ các giao dịch
+    val transactionsState by transactionViewModel.transactions.collectAsState()
+    LaunchedEffect(transactionsState) {
+        if (transactionsState is Resource.Success) {
+            val transactions = transactionsState.data ?: emptyList()
+            val total = transactions
+                .filter { it.type == "expense" }
+                .sumOf { it.price }
+            
+            // Chỉ cập nhật nếu total > 0 (hoặc nếu bạn muốn reset về 0)
+            if (total > 0) {
+                totalExpense = total.toInt().toString()
+            } else if (total == 0.0) {
+                totalExpense = "0"
+            }
+        }
+    }
+
+    val riceVariantsState by fieldViewModel.riceVariantsState.collectAsState()
+
+    // Tự động điền thông tin từ ruộng
+    LaunchedEffect(farmsState, riceVariantsState) {
         val farm = (farmsState.data ?: emptyList()).find { it.id == fieldId }
+        val variants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
+        
         if (farm != null) {
-            if (variantName.isEmpty()) variantName = farm.varietyName
+            val vId = farm.varietyId
+            val foundName = variants.find { it.id == vId }?.name
+            variantName = foundName ?: vId
 
             if (cropSeason.isEmpty()) {
                 try {

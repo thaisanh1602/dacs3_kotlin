@@ -1,19 +1,21 @@
 package com.example.angrismart.domain.model
 
-import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 data class Farm(
-    @DocumentId val id: String = "",
+    val id: String = "",
+    
+    @get:PropertyName("user_uid")
+    @set:PropertyName("user_uid")
     var userId: String = "",
     
-    @get:PropertyName("farm_name")
-    @set:PropertyName("farm_name")
+    @get:PropertyName("field_name")
+    @set:PropertyName("field_name")
     var farmName: String = "",
     
-    @get:PropertyName("variety_name")
-    @set:PropertyName("variety_name")
-    var varietyName: String = "",
+    @get:PropertyName("current_rice_variant_id")
+    @set:PropertyName("current_rice_variant_id")
+    var varietyId: String = "",
     
     @get:PropertyName("age_days")
     @set:PropertyName("age_days")
@@ -21,18 +23,20 @@ data class Farm(
     
     @get:PropertyName("total_growth_days")
     @set:PropertyName("total_growth_days")
-    var totalGrowthDays: Int = 100, // Thường 90-110 ngày tuỳ giống lúa
+    var totalGrowthDays: Int = 100,
 
     @get:PropertyName("sowing_date")
     @set:PropertyName("sowing_date")
     var sowingDate: com.google.firebase.Timestamp? = null,
 
-    @get:PropertyName("area_m2")
-    @set:PropertyName("area_m2")
+    @get:PropertyName("area")
+    @set:PropertyName("area")
     var areaM2: Double = 0.0,
     
-    var latitude: Double? = null,
-    var longitude: Double? = null,
+    var location: Map<String, Double>? = null,
     
-    val status: String = "active" // active, harvested
-)
+    var status: String = "active"
+) {
+    val latitude: Double? get() = location?.get("latitude")
+    val longitude: Double? get() = location?.get("longitude")
+}

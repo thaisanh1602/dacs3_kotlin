@@ -25,13 +25,13 @@ import com.example.angrismart.utils.DiseaseCheckWorker
 import com.example.angrismart.utils.NotificationHelper
 import java.util.concurrent.TimeUnit
 import com.example.angrismart.utils.DataSeeder
-enum class Screen { LOGIN, REGISTER, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT, ADD_HARVEST, SEASON_PROFIT, ADD_FINANCIAL_TRANSACTION }
+enum class Screen { LOGIN, REGISTER, FORGOT_PASSWORD, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT, ADD_HARVEST, SEASON_PROFIT, ADD_FINANCIAL_TRANSACTION }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        DataSeeder.seedData();
+        // DataSeeder.seedData(); // Gỡ bỏ nạp tự động lỗi UID
         // 1. Tạo kênh thông báo Push
         NotificationHelper.createChannel(this)
 
@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                         Screen.ADD_HARVEST -> Screen.FIELD_DETAIL
                         Screen.SEASON_PROFIT -> Screen.HOME
                         Screen.ADD_FINANCIAL_TRANSACTION -> Screen.FIELD_DETAIL
+                        Screen.FORGOT_PASSWORD -> Screen.LOGIN
                         else -> currentScreen
                     }
                 }
@@ -85,8 +86,17 @@ class MainActivity : ComponentActivity() {
                 when (currentScreen) {
                     Screen.LOGIN -> {
                         LoginScreen(
-                            onLoginSuccess = { currentScreen = Screen.HOME },
-                            onNavigateToRegister = { currentScreen = Screen.REGISTER }
+                            onLoginSuccess = { uid -> 
+                                com.example.angrismart.utils.DataSeeder.seedData(uid)
+                                currentScreen = Screen.HOME 
+                            },
+                            onNavigateToRegister = { currentScreen = Screen.REGISTER },
+                            onNavigateToForgotPassword = { currentScreen = Screen.FORGOT_PASSWORD }
+                        )
+                    }
+                    Screen.FORGOT_PASSWORD -> {
+                        com.example.angrismart.ui.screens.auth.ForgotPasswordScreen(
+                            onNavigateBack = { currentScreen = Screen.LOGIN }
                         )
                     }
                     Screen.REGISTER -> {

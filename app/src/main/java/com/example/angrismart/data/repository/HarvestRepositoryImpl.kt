@@ -14,7 +14,7 @@ class HarvestRepositoryImpl(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : HarvestRepository {
 
-    private val collection = firestore.collection("harvests")
+    private val collection = firestore.collection("Harvests")
 
     /**
      * Lưu thu hoạch lên Firestore.
@@ -46,7 +46,14 @@ class HarvestRepositoryImpl(
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents
-                    ?.mapNotNull { it.toObject(Harvest::class.java) }
+                    ?.mapNotNull { doc ->
+                        try {
+                            doc.toObject(Harvest::class.java)
+                        } catch (e: Exception) {
+                            android.util.Log.e("HarvestRepo", "Error parsing harvest: ${e.message}")
+                            null
+                        }
+                    }
                     ?.sortedByDescending { it.harvestDate?.seconds }
                     ?: emptyList()
                 trySend(Resource.Success(list))
@@ -68,7 +75,14 @@ class HarvestRepositoryImpl(
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents
-                    ?.mapNotNull { it.toObject(Harvest::class.java) }
+                    ?.mapNotNull { doc ->
+                        try {
+                            doc.toObject(Harvest::class.java)
+                        } catch (e: Exception) {
+                            android.util.Log.e("HarvestRepo", "Error parsing harvest: ${e.message}")
+                            null
+                        }
+                    }
                     ?.sortedByDescending { it.harvestDate?.seconds }
                     ?: emptyList()
                 trySend(Resource.Success(list))

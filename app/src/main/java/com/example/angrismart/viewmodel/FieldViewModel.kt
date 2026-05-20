@@ -1,9 +1,12 @@
 package com.example.angrismart.viewmodel
 
+import com.google.firebase.auth.FirebaseAuth
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.angrismart.data.repository.FieldRepositoryImpl
 import com.example.angrismart.domain.model.Farm
+import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.domain.repository.FieldRepository
 import com.example.angrismart.utils.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,20 +16,35 @@ import kotlinx.coroutines.launch
 
 class FieldViewModel(
     private val repository: FieldRepository = FieldRepositoryImpl(),
-    private val currentUserId: String = "debug_user_123" // Giả lập Auth UserId, sau này truyền từ AuthViewModel
+    private val masterRepository: com.example.angrismart.domain.repository.MasterDataRepository = com.example.angrismart.data.repository.MasterDataRepositoryImpl()
 ) : ViewModel() {
 
-    // Danh sách Cánh Đồng được quản lý Live dưới dạng StateFlow
+    private val currentUserId: String
+        get() = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    // Danh sách Cánh Đồng
     private val _farmsState = MutableStateFlow<Resource<List<Farm>>>(Resource.Loading())
     val farmsState: StateFlow<Resource<List<Farm>>> = _farmsState.asStateFlow()
+
+    // Danh sách Giống lúa (để map ID -> Name)
+    private val _riceVariantsState = MutableStateFlow<Resource<List<RiceVariant>>>(Resource.Loading())
+    val riceVariantsState: StateFlow<Resource<List<RiceVariant>>> = _riceVariantsState.asStateFlow()
 
     // Trạng thái Khi Thêm Farm
     private val _addFarmState = MutableStateFlow<Resource<String>?>(null)
     val addFarmState: StateFlow<Resource<String>?> = _addFarmState.asStateFlow()
 
     init {
-        // Tự động load dữ liệu khi màn hình mở lên
         loadFarms()
+        loadRiceVariants()
+    }
+
+    fun loadRiceVariants() {
+        viewModelScope.launch {
+            masterRepository.getRiceVariants().collect { result ->
+                _riceVariantsState.value = result
+            }
+        }
     }
 
     fun loadFarms() {
@@ -65,10 +83,9 @@ class FieldViewModel(
             val newFarm = Farm(
                 userId = currentUserId,
                 farmName = farmName,
-                varietyName = varietyName,
+                varietyId = varietyName,
                 areaM2 = area,
-                latitude = latitude,
-                longitude = longitude,
+                location = mapOf("latitude" to latitude, "longitude" to longitude),
                 ageDays = 0,
                 sowingDate = sowingDate,
                 totalGrowthDays = 95
