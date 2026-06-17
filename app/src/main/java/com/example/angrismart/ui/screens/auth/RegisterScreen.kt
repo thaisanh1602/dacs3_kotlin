@@ -12,6 +12,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +34,8 @@ fun RegisterScreen(
     var email by remember { mutableStateOf(TextFieldValue("")) }
     var password by remember { mutableStateOf(TextFieldValue("")) }
     var confirmPassword by remember { mutableStateOf(TextFieldValue("")) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsState()
@@ -81,7 +87,18 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it; localError = "" },
                 label = { Text("Mật khẩu", style = MaterialTheme.typography.bodyLarge) },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (passwordVisible)
+                        Icons.Filled.Visibility
+                    else Icons.Filled.VisibilityOff
+
+                    val description = if (passwordVisible) "Ẩn mật khẩu" else "Hiển thị mật khẩu"
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = description)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(68.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
@@ -98,7 +115,18 @@ fun RegisterScreen(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it; localError = "" },
                 label = { Text("Xác nhận lại Mật khẩu", style = MaterialTheme.typography.bodyLarge) },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (confirmPasswordVisible)
+                        Icons.Filled.Visibility
+                    else Icons.Filled.VisibilityOff
+
+                    val description = if (confirmPasswordVisible) "Ẩn mật khẩu" else "Hiển thị mật khẩu"
+
+                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                        Icon(imageVector = image, contentDescription = description)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(68.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,

@@ -22,9 +22,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Harvest
 import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.domain.model.SeasonTemplate
-import com.example.angrismart.ui.theme.GreenPrimary
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.HarvestViewModel
+import com.example.angrismart.viewmodel.FieldViewModel
+import com.example.angrismart.domain.model.Farm
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ChevronRight
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -33,23 +37,30 @@ import java.util.Locale
 @Composable
 fun SeasonProfitScreen(
     harvestViewModel: HarvestViewModel = viewModel(),
+    fieldViewModel: FieldViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToAddHarvest: () -> Unit = {}
+    onNavigateToAddHarvest: (String) -> Unit = {},
+    onNavigateToAddField: () -> Unit = {}
 ) {
     val harvestState by harvestViewModel.harvestListState.collectAsState()
     val riceVariantsState by harvestViewModel.riceVariantsState.collectAsState()
     val seasonTemplatesState by harvestViewModel.seasonTemplatesState.collectAsState()
+    val farmsState by fieldViewModel.farmsState.collectAsState()
     
     val riceVariants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
     val seasons: List<SeasonTemplate> = seasonTemplatesState.data ?: emptyList()
+    val farms: List<Farm> = farmsState.data ?: emptyList()
     
     val vndFormat = remember { NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN")) }
+
+    var showFieldPickerDialog by remember { mutableStateOf(false) }
 
     // Khi màn hình mở, load dữ liệu thu hoạch TOÀN BỘ của user
     LaunchedEffect(Unit) {
         harvestViewModel.loadHarvestsByUser()
         harvestViewModel.loadRiceVariants()
         harvestViewModel.loadSeasonTemplates()
+        fieldViewModel.loadFarms()
     }
 
     val harvests = (harvestState as? Resource.Success)?.data ?: emptyList()
@@ -71,7 +82,7 @@ fun SeasonProfitScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onNavigateToAddHarvest,
+                onClick = { showFieldPickerDialog = true },
                 containerColor = GreenPrimary,
                 contentColor = Color.White,
                 shape = RoundedCornerShape(16.dp)
@@ -112,7 +123,7 @@ fun SeasonProfitScreen(
                     }
 
                     if (harvests.isEmpty()) {
-                        item { EmptyHarvestPlaceholder(onNavigateToAddHarvest) }
+                        item { EmptyHarvestPlaceholder(onAdd = { showFieldPickerDialog = true }) }
                     } else {
                         // --- Biểu đồ cột ---
                         item {
@@ -136,6 +147,115 @@ fun SeasonProfitScreen(
                 }
             }
         }
+    }
+
+    if (showFieldPickerDialog) {
+        AlertDialog(
+            onDismissRequest = { showFieldPickerDialog = false },
+            title = { Text("Chọn Thửa Ruộng", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (farms.isEmpty()) {
+                        Text(
+                            "Bạn chưa có thửa ruộng nào. Vui lòng tạo ruộng mới trước khi ghi nhận thu hoạch.",
+                            color = TextSecondary
+                        )
+                    } else {
+                        Text(
+                            "Vui lòng chọn ruộng đã thu hoạch:",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 280.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(farms) { farm ->
+                                val varietyName = riceVariants.find { it.id == farm.varietyId }?.name ?: farm.varietyId
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            showFieldPickerDialog = false
+                                            onNavigateToAddHarvest(farm.id)
+                                        },
+                                    colors = CardDefaults.cardColors(containerColor = LightMint),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = farm.farmName,
+                                                fontWeight = FontWeight.Bold,
+                                                color = ForestGreen,
+                                                fontSize = 16.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Giống lúa: $varietyName",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                            )
+                                            Text(
+                                                text = "Diện tích: ${farm.areaM2} m²",
+                                                color = TextSecondary,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = ForestGreen
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (farms.isEmpty()) {
+                    Button(
+                        onClick = {
+                            showFieldPickerDialog = false
+                            onNavigateToAddField()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                    ) {
+                        Text("Tạo ruộng mới", color = Color.White)
+                    }
+                } else {
+                    TextButton(
+                        onClick = {
+                            showFieldPickerDialog = false
+                            onNavigateToAddField()
+                        }
+                    ) {
+                        Text("Thêm ruộng mới", color = ForestGreen, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFieldPickerDialog = false }) {
+                    Text("Hủy", color = TextSecondary)
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = SurfaceWhite
+        )
     }
 }
 

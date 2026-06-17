@@ -75,4 +75,15 @@ class FieldRepositoryImpl(
             emit(Resource.Error(e.localizedMessage ?: "Lỗi khi cập nhật dữ liệu!"))
         }
     }
+
+    override suspend fun deleteFarm(farmId: String): Flow<Resource<String>> = flow {
+        emit(Resource.Loading())
+        try {
+            firestore.collection("Fields").document(farmId).delete().await()
+            emit(Resource.Success("Xóa thành công"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.localizedMessage ?: "Lỗi khi xóa dữ liệu!"))
+        }
+    }
 }
+

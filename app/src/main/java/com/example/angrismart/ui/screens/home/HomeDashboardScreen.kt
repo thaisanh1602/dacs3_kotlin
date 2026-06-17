@@ -62,7 +62,8 @@ fun HomeDashboardScreen(
     onNavigateToWeather: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onNavigateToProfit: () -> Unit = {},
-    onNavigateToFieldDetail: (String) -> Unit = {}
+    onNavigateToFieldDetail: (String) -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val weatherState by weatherViewModel.currentWeather.collectAsState()
     val diseaseRisk by weatherViewModel.diseaseRisk.collectAsState()
@@ -131,6 +132,7 @@ fun HomeDashboardScreen(
     }
 
     val scrollState = rememberScrollState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     // Greeting logic based on time
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -206,7 +208,8 @@ fun HomeDashboardScreen(
                         .size(52.dp)
                         .clip(RoundedCornerShape(26.dp))
                         .background(GlassCardBg)
-                        .border(1.dp, GlassCardBorder, RoundedCornerShape(26.dp)),
+                        .border(1.dp, GlassCardBorder, RoundedCornerShape(26.dp))
+                        .clickable { showLogoutDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Text("🌾", fontSize = 24.sp)
@@ -457,8 +460,30 @@ fun HomeDashboardScreen(
                     }
                 }
             }
-            
             Spacer(modifier = Modifier.height(60.dp))
+        }
+
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text("Đăng xuất", fontWeight = FontWeight.Bold) },
+                text = { Text("Bà con có chắc chắn muốn đăng xuất khỏi tài khoản hiện tại không?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showLogoutDialog = false
+                            onLogout()
+                        }
+                    ) {
+                        Text("Đăng xuất", color = DangerRed, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Hủy", color = TextPrimary)
+                    }
+                }
+            )
         }
     }
 }

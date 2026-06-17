@@ -13,4 +13,8 @@ interface FieldRepository {
 
     // Cập nhật thông tin ruộng (ví dụ: ngày gieo sạ)
     suspend fun updateFarm(farm: Farm): Flow<Resource<String>>
+
+    // Xóa một thửa ruộng
+    suspend fun deleteFarm(farmId: String): Flow<Resource<String>>
 }
+
