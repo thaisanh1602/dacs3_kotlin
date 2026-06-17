@@ -12,6 +12,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,15 +35,16 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.ScanViewModel
 import java.io.File
-import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +81,6 @@ fun ScanDiseaseScreen(
         if (scanState is Resource.Success) {
             val resData = scanState?.data
             viewModel.resetState()
-            
             if (resData != null) {
                 onNavigateToResult(
                     resData.diseaseName,
@@ -104,8 +107,8 @@ fun ScanDiseaseScreen(
 
     if (hasCameraPermission) {
         Box(modifier = Modifier.fillMaxSize()) {
-            
-            // 1. Camera View
+
+            // 1. Camera preview fullscreen
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
@@ -114,7 +117,6 @@ fun ScanDiseaseScreen(
                     val preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-
                     try {
                         cameraProvider.unbindAll()
                         cameraProvider.bindToLifecycle(
@@ -130,206 +132,333 @@ fun ScanDiseaseScreen(
                 }
             )
 
-            // 2. Animated Scanner Box
+            // Dark overlay on top and bottom
             Box(
                 modifier = Modifier
-                    .size(280.dp)
-                    .align(Alignment.Center)
-                    .offset(y = (-40).dp)
-            ) {
-                // Border frame
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(3.dp, Color(0xFF00E676).copy(alpha = 0.8f), RoundedCornerShape(24.dp))
-                        .clip(RoundedCornerShape(24.dp))
-                ) {
-                    // Laser Animation
-                    val infiniteTransition = rememberInfiniteTransition(label = "scanner")
-                    val position by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 280f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(2000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "laser_position"
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)
+                        )
                     )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .offset(y = position.dp)
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color(0xFF00E676),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                            .shadow(8.dp, spotColor = Color(0xFF00E676))
-                    )
-                }
-            }
-
-            // Instructional text with shadow
-            Text(
-                text = "Giữ lá lúa nằm gọn trong khung",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    shadow = Shadow(
-                        color = Color.Black,
-                        offset = Offset(2f, 2f),
-                        blurRadius = 8f
-                    )
-                ),
+            )
+            Box(
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 130.dp)
-                    .background(Color(0x66000000), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                        )
+                    )
             )
 
-            // 3. Top Action (Close)
+            // 2. Scan frame – rounded rectangle with corner brackets
+            Box(
+                modifier = Modifier
+                    .size(260.dp)
+                    .align(Alignment.Center)
+                    .offset(y = (-30).dp)
+            ) {
+                // Rounded frame corners
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val stroke = 4.dp.toPx()
+                    val cornerLen = 32.dp.toPx()
+                    val radius = 24.dp.toPx()
+                    val accent = Color(0xFF52D68A)
+
+                    // Top-left
+                    drawLine(accent, Offset(radius, 0f), Offset(cornerLen, 0f), stroke)
+                    drawLine(accent, Offset(0f, radius), Offset(0f, cornerLen), stroke)
+                    // Top-right
+                    drawLine(accent, Offset(size.width - cornerLen, 0f), Offset(size.width - radius, 0f), stroke)
+                    drawLine(accent, Offset(size.width, radius), Offset(size.width, cornerLen), stroke)
+                    // Bottom-left
+                    drawLine(accent, Offset(0f, size.height - cornerLen), Offset(0f, size.height - radius), stroke)
+                    drawLine(accent, Offset(radius, size.height), Offset(cornerLen, size.height), stroke)
+                    // Bottom-right
+                    drawLine(accent, Offset(size.width, size.height - cornerLen), Offset(size.width, size.height - radius), stroke)
+                    drawLine(accent, Offset(size.width - cornerLen, size.height), Offset(size.width - radius, size.height), stroke)
+                }
+
+                // Animated laser line
+                val transition = rememberInfiniteTransition(label = "scanner")
+                val laserY by transition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 260f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(2000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "laser_y"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .offset(y = laserY.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF52D68A).copy(alpha = 0.8f),
+                                    Color.White.copy(alpha = 0.9f),
+                                    Color(0xFF52D68A).copy(alpha = 0.8f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+
+            // Instruction label
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = 112.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Giữ lá lúa nằm gọn trong khung",
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp
+                )
+            }
+
+            // 3. Close button (top left)
             IconButton(
                 onClick = onNavigateBack,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(16.dp)
-                    .padding(top = 24.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                    .padding(start = 16.dp, top = 48.dp)
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), CircleShape)
             ) {
-                Icon(Icons.Default.Close, "Đóng", tint = Color.White)
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Đóng",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
-            // 4. Bottom Glassmorphism Panel
-            Box(
+            // 4. Bottom controls panel
+            Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.7f),
-                                Color.Black.copy(alpha = 0.9f)
-                            )
-                        )
-                    )
-                    .padding(bottom = 32.dp),
-                contentAlignment = Alignment.Center
+                    .padding(16.dp)
+                    .shadow(20.dp, RoundedCornerShape(28.dp)),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF0D1F0D).copy(alpha = 0.88f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, Color.White.copy(alpha = 0.12f)
+                )
             ) {
-                if (scanState is Resource.Loading) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (scanState is Resource.Loading) {
+                        // Analysing state
                         CircularProgressIndicator(
-                            color = Color(0xFF00E676),
-                            modifier = Modifier.size(50.dp),
-                            strokeWidth = 4.dp
+                            color = Color(0xFF52D68A),
+                            modifier = Modifier.size(44.dp),
+                            strokeWidth = 3.dp
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "AI đang xử lý hình ảnh...",
+                            text = "AI đang phân tích ảnh lá...",
                             color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
                         )
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Nút Thư viện
-                        IconButton(
-                            onClick = { galleryLauncher.launch("image/*") },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("📁", fontSize = 24.sp)
-                        }
-
-                        // Nút Chụp Ảnh bự
-                        Button(
-                            onClick = {
-                                val photoFile = File(context.cacheDir, "scan_leaf.jpg")
-                                val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-                                
-                                imageCapture.takePicture(
-                                    outputOptions, 
-                                    ContextCompat.getMainExecutor(context),
-                                    object : ImageCapture.OnImageSavedCallback {
-                                        override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                            viewModel.analyzeImage(photoFile)
-                                        }
-
-                                        override fun onError(exception: ImageCaptureException) {
-                                            Log.e("Upload", "Lỗi Capture Camera")
-                                        }
-                                    }
+                            // Gallery button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(
+                                    onClick = { galleryLauncher.launch("image/*") },
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .background(Color.White.copy(alpha = 0.12f), CircleShape)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoLibrary,
+                                        contentDescription = "Thư viện",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Thư viện",
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    fontSize = 11.sp
                                 )
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
-                            shape = CircleShape,
-                            modifier = Modifier
-                                .size(80.dp)
-                                .border(4.dp, Color.White.copy(alpha = 0.5f), CircleShape),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
-                        ) {
-                            Text("📸", fontSize = 28.sp)
+                            }
+
+                            // Main capture button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .border(3.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+                                        .padding(5.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val photoFile = File(context.cacheDir, "scan_leaf.jpg")
+                                            val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                                            imageCapture.takePicture(
+                                                outputOptions,
+                                                ContextCompat.getMainExecutor(context),
+                                                object : ImageCapture.OnImageSavedCallback {
+                                                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                                                        viewModel.analyzeImage(photoFile)
+                                                    }
+                                                    override fun onError(exception: ImageCaptureException) {
+                                                        Log.e("Upload", "Lỗi Capture Camera", exception)
+                                                    }
+                                                }
+                                            )
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF52D68A)
+                                        ),
+                                        shape = CircleShape,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text("📸", fontSize = 24.sp)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Chụp ảnh",
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    fontSize = 11.sp
+                                )
+                            }
+
+                            // Help button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(
+                                    onClick = { /* Open instructions */ },
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.HelpOutline,
+                                        contentDescription = "Hướng dẫn",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Hướng dẫn",
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
-                        // Fake button for spacing balance (or can be flash toggle later)
-                        Box(modifier = Modifier.size(56.dp))
-                    }
-
-                    if (scanState is Resource.Error) {
-                        Text(
-                            text = scanState?.message ?: "Lỗi máy chủ!",
-                            color = Color(0xFFFF5252),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .offset(y = (-30).dp)
-                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                                .padding(8.dp)
-                        )
+                        // Error display
+                        if (scanState is Resource.Error) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "⚠️ ${scanState?.message ?: "Lỗi máy chủ!"}",
+                                color = Color(0xFFFF6B6B),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     } else {
-        Column(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5)).padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        // Permission request screen
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(NeutralBg),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "🌾",
-                fontSize = 64.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "AngriSmart cần sử dụng Camera để chẩn đoán sâu bệnh trên lúa.",
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                color = Color.DarkGray
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(50.dp)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(28.dp)
+                    .shadow(12.dp, RoundedCornerShape(28.dp)),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
             ) {
-                Text("CẤP QUYỀN CAMERA", fontWeight = FontWeight.Bold)
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(LightMint),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🌾", fontSize = 40.sp)
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "Cần quyền Camera",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "AngriSmart cần Camera để chụp ảnh lá lúa và chẩn đoán sâu bệnh bằng AI.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = TextSecondary,
+                        lineHeight = 22.sp
+                    )
+                    Spacer(modifier = Modifier.height(28.dp))
+                    Button(
+                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                        shape = RoundedCornerShape(27.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Text(
+                            text = "Cấp quyền Camera",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
         }
     }

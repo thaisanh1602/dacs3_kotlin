@@ -9,18 +9,31 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Sử dụng Light theme cho UI dễ nhìn ngoài nắng, xoá dark mode động
 private val LightColorScheme = lightColorScheme(
-    primary = GreenPrimary,
-    secondary = GreenSecondary,
-    tertiary = YellowWarning,
-    background = BackgroundLight,
-    surface = SurfaceWhite,
-    error = RedError,
-    onPrimary = TextLight,
-    onSecondary = TextDark,
-    onBackground = TextDark,
-    onSurface = TextDark
+    primary          = ForestGreen,
+    onPrimary        = TextLight,
+    primaryContainer = LightMint,
+    onPrimaryContainer = ForestGreen,
+
+    secondary        = SageGreen,
+    onSecondary      = TextLight,
+    secondaryContainer = PaleGreen,
+    onSecondaryContainer = SageGreen,
+
+    tertiary         = MintGreen,
+    onTertiary       = TextLight,
+
+    background       = NeutralBg,
+    onBackground     = TextPrimary,
+
+    surface          = SurfaceWhite,
+    onSurface        = TextPrimary,
+    surfaceVariant   = PaleGreen,
+    onSurfaceVariant = TextSecondary,
+
+    outline          = DividerLine,
+    error            = DangerRed,
+    onError          = TextLight,
 )
 
 @Composable
@@ -29,18 +42,20 @@ fun AngriSmartTheme(
 ) {
     val colorScheme = LightColorScheme
     val view = LocalView.current
-    
+
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            // Transparent status bar – content draws edge-to-edge
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        typography  = Typography,
+        content     = content
     )
 }
