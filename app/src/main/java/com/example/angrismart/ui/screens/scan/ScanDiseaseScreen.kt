@@ -45,6 +45,10 @@ import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.ScanViewModel
 import java.io.File
+import androidx.compose.material.icons.filled.CenterFocusWeak
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.ui.window.DialogProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +61,7 @@ fun ScanDiseaseScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var hasCameraPermission by remember { mutableStateOf(false) }
+    var showInstructions by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -359,7 +364,7 @@ fun ScanDiseaseScreen(
                             // Help button
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 IconButton(
-                                    onClick = { /* Open instructions */ },
+                                    onClick = { showInstructions = true },
                                     modifier = Modifier
                                         .size(52.dp)
                                         .background(Color.White.copy(alpha = 0.08f), CircleShape)
@@ -396,6 +401,89 @@ fun ScanDiseaseScreen(
                         }
                     }
                 }
+            }
+
+            if (showInstructions) {
+                AlertDialog(
+                    onDismissRequest = { showInstructions = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(28.dp),
+                    containerColor = Color(0xFF0B1A0E).copy(alpha = 0.95f),
+                    tonalElevation = 8.dp,
+                    title = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Hướng dẫn quét ảnh",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                            IconButton(
+                                onClick = { showInstructions = false },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Đóng",
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            GuideItem(
+                                icon = Icons.Default.CenterFocusWeak,
+                                title = "Khoảng cách",
+                                description = "Hiển thị khung viền lấy nét (Bounding Box), yêu cầu chụp cách lá 10–15 cm để đảm bảo ảnh rõ chi tiết bệnh.",
+                                iconColor = Color(0xFF52D68A)
+                            )
+                            GuideItem(
+                                icon = Icons.Default.Layers,
+                                title = "Phông nền",
+                                description = "Yêu cầu sử dụng nền đơn sắc (tấm bìa hoặc bàn tay phía sau lá) để tách lá bệnh khỏi nền, giảm nhận diện nhầm.",
+                                iconColor = Color(0xFF52D68A)
+                            )
+                            GuideItem(
+                                icon = Icons.Default.LightMode,
+                                title = "Ánh sáng",
+                                description = "Khuyến nghị chụp dưới ánh sáng tự nhiên tán xạ, tránh ngược sáng và tránh chụp khi lá có quá nhiều nước hoặc sương vì dễ gây sai lệch kết quả nhận diện.",
+                                iconColor = Color(0xFF52D68A)
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { showInstructions = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF52D68A)
+                            ),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                        ) {
+                            Text(
+                                text = "Đã hiểu",
+                                color = Color(0xFF0B1A0E),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                )
             }
         }
     } else {
@@ -463,3 +551,53 @@ fun ScanDiseaseScreen(
         }
     }
 }
+
+@Composable
+private fun GuideItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    iconColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(iconColor.copy(alpha = 0.15f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 12.sp,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+

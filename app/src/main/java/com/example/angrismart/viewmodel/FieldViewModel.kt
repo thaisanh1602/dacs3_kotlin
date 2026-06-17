@@ -104,6 +104,18 @@ class FieldViewModel(
         }
     }
 
+    fun updateFarm(farm: Farm) {
+        viewModelScope.launch {
+            repository.updateFarm(farm).collect { /* Xử lý nếu cần */ }
+        }
+    }
+
+    fun deleteFarm(farmId: String) {
+        viewModelScope.launch {
+            repository.deleteFarm(farmId).collect { /* Xử lý nếu cần */ }
+        }
+    }
+
     // Xoá trạng thái lưu lại màn hình Thêm để tránh popup liên tục
     fun resetAddFarmState() {
         _addFarmState.value = null

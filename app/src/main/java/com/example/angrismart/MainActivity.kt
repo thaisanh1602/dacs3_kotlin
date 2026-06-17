@@ -49,6 +49,9 @@ import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Chat
+import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.angrismart.viewmodel.AuthViewModel
 
 enum class Screen { LOGIN, REGISTER, FORGOT_PASSWORD, HOME, MY_FIELDS, ADD_FIELD, SCAN, SCAN_RESULT, FIELD_DETAIL, WEATHER, CHAT, ADD_HARVEST, SEASON_PROFIT, ADD_FINANCIAL_TRANSACTION }
 
@@ -80,8 +83,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AngriSmartTheme {
+                val authViewModel: AuthViewModel = viewModel()
                 var currentScreen by remember { mutableStateOf(Screen.LOGIN) }
                 var selectedFieldId by remember { mutableStateOf("") }
+                var harvestBackScreen by remember { mutableStateOf(Screen.FIELD_DETAIL) }
 
                 // Lưu kết quả chẩn đoán AI
                 var resultDisease by remember { mutableStateOf("") }
@@ -100,7 +105,7 @@ class MainActivity : ComponentActivity() {
                         Screen.SCAN_RESULT -> Screen.SCAN
                         Screen.CHAT -> Screen.HOME
                         Screen.REGISTER -> Screen.LOGIN
-                        Screen.ADD_HARVEST -> Screen.FIELD_DETAIL
+                        Screen.ADD_HARVEST -> harvestBackScreen
                         Screen.SEASON_PROFIT -> Screen.HOME
                         Screen.ADD_FINANCIAL_TRANSACTION -> Screen.FIELD_DETAIL
                         Screen.FORGOT_PASSWORD -> Screen.LOGIN
@@ -116,6 +121,7 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         Screen.LOGIN -> {
                             LoginScreen(
+                                viewModel = authViewModel,
                                 onLoginSuccess = { uid ->
                                     com.example.angrismart.utils.DataSeeder.seedData(uid)
                                     currentScreen = Screen.HOME
@@ -126,11 +132,13 @@ class MainActivity : ComponentActivity() {
                         }
                         Screen.FORGOT_PASSWORD -> {
                             com.example.angrismart.ui.screens.auth.ForgotPasswordScreen(
-                                onNavigateBack = { currentScreen = Screen.LOGIN }
+                                onNavigateBack = { currentScreen = Screen.LOGIN },
+                                authViewModel = authViewModel
                             )
                         }
                         Screen.REGISTER -> {
                             com.example.angrismart.ui.screens.auth.RegisterScreen(
+                                viewModel = authViewModel,
                                 onNavigateBack = { currentScreen = Screen.LOGIN }
                             )
                         }
@@ -213,7 +221,12 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToScan = { currentScreen = Screen.SCAN },
                                         onNavigateToWeather = { currentScreen = Screen.WEATHER },
                                         onNavigateToChat = { currentScreen = Screen.CHAT },
-                                        onNavigateToProfit = { currentScreen = Screen.SEASON_PROFIT }
+                                        onNavigateToProfit = { currentScreen = Screen.SEASON_PROFIT },
+                                        onLogout = {
+                                            FirebaseAuth.getInstance().signOut()
+                                            authViewModel.resetState()
+                                            currentScreen = Screen.LOGIN
+                                        }
                                     )
                                 }
                                 Screen.MY_FIELDS -> {
@@ -227,13 +240,16 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 Screen.FIELD_DETAIL -> {
-                                    com.example.angrismart.ui.screens.field.FieldDetailScreen(
-                                        fieldId = selectedFieldId,
-                                        onNavigateBack = { currentScreen = Screen.MY_FIELDS },
-                                        onNavigateToScan = { currentScreen = Screen.SCAN },
-                                        onNavigateToAddHarvest = { currentScreen = Screen.ADD_HARVEST },
-                                        onNavigateToAddTransaction = { currentScreen = Screen.ADD_FINANCIAL_TRANSACTION }
-                                    )
+                                     com.example.angrismart.ui.screens.field.FieldDetailScreen(
+                                         fieldId = selectedFieldId,
+                                         onNavigateBack = { currentScreen = Screen.MY_FIELDS },
+                                         onNavigateToScan = { currentScreen = Screen.SCAN },
+                                         onNavigateToAddHarvest = { 
+                                             harvestBackScreen = Screen.FIELD_DETAIL
+                                             currentScreen = Screen.ADD_HARVEST 
+                                         },
+                                         onNavigateToAddTransaction = { currentScreen = Screen.ADD_FINANCIAL_TRANSACTION }
+                                     )
                                 }
                                 Screen.ADD_FIELD -> {
                                     AddFieldScreen(
@@ -275,17 +291,24 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 Screen.ADD_HARVEST -> {
-                                    com.example.angrismart.ui.screens.field.AddHarvestScreen(
-                                        fieldId = selectedFieldId,
-                                        onNavigateBack = { currentScreen = Screen.FIELD_DETAIL },
-                                        onSaveSuccess = { currentScreen = Screen.SEASON_PROFIT }
-                                    )
+                                     com.example.angrismart.ui.screens.field.AddHarvestScreen(
+                                         fieldId = selectedFieldId,
+                                         onNavigateBack = { currentScreen = harvestBackScreen },
+                                         onSaveSuccess = { currentScreen = Screen.SEASON_PROFIT }
+                                     )
                                 }
                                 Screen.SEASON_PROFIT -> {
-                                    com.example.angrismart.ui.screens.field.SeasonProfitScreen(
-                                        onNavigateBack = { currentScreen = Screen.HOME },
-                                        onNavigateToAddHarvest = { /* Có thể điều hướng đến màn hình chọn ruộng trước */ }
-                                    )
+                                     com.example.angrismart.ui.screens.field.SeasonProfitScreen(
+                                         onNavigateBack = { currentScreen = Screen.HOME },
+                                         onNavigateToAddHarvest = { fieldId ->
+                                             selectedFieldId = fieldId
+                                             harvestBackScreen = Screen.SEASON_PROFIT
+                                             currentScreen = Screen.ADD_HARVEST
+                                         },
+                                         onNavigateToAddField = {
+                                             currentScreen = Screen.ADD_FIELD
+                                         }
+                                     )
                                 }
                                 Screen.ADD_FINANCIAL_TRANSACTION -> {
                                     com.example.angrismart.ui.screens.field.AddFinancialTransactionScreen(

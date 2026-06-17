@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import java.util.Calendar
 import java.util.Date
 import androidx.compose.ui.Alignment
@@ -86,6 +88,22 @@ fun FieldDetailScreen(
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = farm?.sowingDate?.toDate()?.time ?: System.currentTimeMillis()
     )
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var isInitialized by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(farmsState) {
+        if (farmsState is Resource.Success) {
+            isInitialized = true
+        }
+    }
+    
+    LaunchedEffect(farm, isInitialized) {
+        if (isInitialized && farm == null) {
+            onNavigateBack()
+        }
+    }
 
     // Like state simulation
     var isLiked by remember { mutableStateOf(false) }
@@ -182,14 +200,36 @@ fun FieldDetailScreen(
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = "Sửa ngày gieo", tint = Color.White)
                         }
-                        IconButton(
-                            onClick = { /* More details */ },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.4f))
-                        ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Tùy chọn", tint = Color.White)
+                        var menuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.4f))
+                            ) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Tùy chọn", tint = Color.White)
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Chỉnh sửa") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showEditDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Xóa", color = DangerRed) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showDeleteConfirmDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -459,6 +499,137 @@ fun FieldDetailScreen(
             }
         ) {
             DatePicker(state = datePickerState)
+        }
+
+        // Chỉnh sửa đồng ruộng Dialog
+        if (showEditDialog && farm != null) {
+            var editName by remember { mutableStateOf(farm.farmName) }
+            var editArea by remember { mutableStateOf(farm.areaM2.toString()) }
+            var editVariety by remember { mutableStateOf(farm.varietyId) }
+            var expandedVarietyDropdown by remember { mutableStateOf(false) }
+            val varietiesList = listOf("Lúa ST25", "Jasmine 85", "Đài Thơm 8", "OM5451")
+
+            AlertDialog(
+                onDismissRequest = { 
+                    showEditDialog = false 
+                },
+                title = { Text("Chỉnh sửa đồng ruộng", fontWeight = FontWeight.Bold, color = TextPrimary) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editName,
+                            onValueChange = { editName = it },
+                            label = { Text("Tên mảnh ruộng") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = ForestGreen)
+                        )
+                        OutlinedTextField(
+                            value = editArea,
+                            onValueChange = { editArea = it },
+                            label = { Text("Diện tích (m²)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = ForestGreen)
+                        )
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            ExposedDropdownMenuBox(
+                                expanded = expandedVarietyDropdown,
+                                onExpandedChange = { expandedVarietyDropdown = it }
+                            ) {
+                                OutlinedTextField(
+                                    value = editVariety,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Giống lúa") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVarietyDropdown) },
+                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(focusedBorderColor = ForestGreen)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expandedVarietyDropdown,
+                                    onDismissRequest = { expandedVarietyDropdown = false }
+                                ) {
+                                    varietiesList.forEach { variety ->
+                                        DropdownMenuItem(
+                                            text = { Text(variety) },
+                                            onClick = {
+                                                editVariety = variety
+                                                expandedVarietyDropdown = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val areaVal = editArea.toDoubleOrNull() ?: 0.0
+                            if (editName.isNotBlank() && areaVal > 0) {
+                                val updatedFarm = farm.copy(
+                                    farmName = editName,
+                                    areaM2 = areaVal,
+                                    varietyId = editVariety
+                                )
+                                viewModel.updateFarm(updatedFarm)
+                                showEditDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                    ) {
+                        Text("Lưu lại", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { 
+                            showEditDialog = false 
+                        }
+                    ) {
+                        Text("Hủy", color = TextSecondary)
+                    }
+                }
+            )
+        }
+
+        // Xoá đồng ruộng Dialog
+        if (showDeleteConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showDeleteConfirmDialog = false 
+                },
+                title = { Text("Xác nhận xóa", fontWeight = FontWeight.Bold, color = TextPrimary) },
+                text = { Text("Bạn có chắc chắn muốn xóa ruộng này? Dữ liệu liên quan cũng sẽ bị ảnh hưởng.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteFarm(fieldId)
+                            showDeleteConfirmDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                    ) {
+                        Text("Xóa", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { 
+                            showDeleteConfirmDialog = false 
+                        }
+                    ) {
+                        Text("Hủy", color = TextSecondary)
+                    }
+                }
+            )
         }
     }
 }
