@@ -10,4 +10,7 @@ interface FieldRepository {
     
     // Thêm một thửa ruộng mới vào cơ sở dữ liệu
     suspend fun addFarm(farm: Farm): Flow<Resource<String>>
+
+    // Cập nhật thông tin ruộng (ví dụ: ngày gieo sạ)
+    suspend fun updateFarm(farm: Farm): Flow<Resource<String>>
 }

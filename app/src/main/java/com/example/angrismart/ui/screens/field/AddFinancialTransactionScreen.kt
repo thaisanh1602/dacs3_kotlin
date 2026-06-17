@@ -1,0 +1,206 @@
+package com.example.angrismart.ui.screens.field
+
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.angrismart.domain.model.FinancialTransaction
+import com.example.angrismart.ui.theme.GreenPrimary
+import com.example.angrismart.ui.theme.RedError
+import com.example.angrismart.utils.Resource
+import com.example.angrismart.viewmodel.FinancialTransactionViewModel
+import com.example.angrismart.data.repository.FinancialTransactionRepositoryImpl
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddFinancialTransactionScreen(
+    fieldId: String,
+    onNavigateBack: () -> Unit,
+    onSaveSuccess: () -> Unit
+) {
+    val viewModel: FinancialTransactionViewModel = viewModel()
+
+    val categoryOptions = listOf("Mua phân bón", "Mua thuốc trừ sâu", "Thuê nhân công", "Thuê máy móc", "Khác")
+    var category by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("2026-04-10T15:30:00Z") } // TODO: Use date picker
+    var expanded by remember { mutableStateOf(false) }
+
+    val addStatus by viewModel.addTransactionStatus.collectAsState()
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(addStatus) {
+        if (addStatus is Resource.Success) {
+            viewModel.resetAddTransactionStatus()
+            onSaveSuccess()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Thêm Chi phí", color = Color.White, fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Trở về", tint = Color.White)
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(scrollState)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "💰 Nhập Khoản Chi",
+                style = MaterialTheme.typography.titleLarge,
+                color = RedError,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Danh mục
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it }
+            ) {
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Danh mục") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(focusedBorderColor = GreenPrimary),
+                    modifier = Modifier.menuAnchor().fillMaxWidth().height(68.dp),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    categoryOptions.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                category = selectionOption
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Số tiền
+            OutlinedTextField(
+                value = price,
+                onValueChange = { price = it },
+                label = { Text("Số tiền (VNĐ)") },
+                modifier = Modifier.fillMaxWidth().height(68.dp),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Ghi chú
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text("Ghi chú") },
+                modifier = Modifier.fillMaxWidth().height(100.dp),
+                shape = RoundedCornerShape(12.dp),
+                maxLines = 3,
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Ngày tháng
+            OutlinedTextField(
+                value = date,
+                onValueChange = { date = it },
+                label = { Text("Ngày") },
+                trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Lịch", tint = GreenPrimary) },
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary),
+                modifier = Modifier.fillMaxWidth().height(68.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            if (addStatus is Resource.Error) {
+                Text(
+                    text = addStatus?.message ?: "Lỗi",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            Button(
+                onClick = {
+                    val priceDouble = price.toDoubleOrNull()
+                    if (category.isNotBlank() && priceDouble != null) {
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+                        val timestamp = try {
+                            val parsedDate = dateFormat.parse(date)
+                            if (parsedDate != null) Timestamp(parsedDate) else Timestamp.now()
+                        } catch (e: Exception) {
+                            Timestamp.now()
+                        }
+
+                        val transaction = FinancialTransaction(
+                            fieldId = fieldId,
+                            userUid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+                            type = "expense",
+                            category = category,
+                            price = priceDouble,
+                            note = note,
+                            date = timestamp
+                        )
+                        viewModel.addTransaction(transaction)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
+                enabled = addStatus !is Resource.Loading
+            ) {
+                if (addStatus is Resource.Loading) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text("LƯU", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+    }
+}

@@ -1,7 +1,6 @@
 package com.example.angrismart.domain.model
 
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 /**
@@ -11,7 +10,7 @@ import com.google.firebase.firestore.PropertyName
  *   profit = (totalWeight × salePrice) - totalExpense
  */
 data class Harvest(
-    @DocumentId val id: String = "",
+    val id: String = "",
 
     @get:PropertyName("field_id")
     @set:PropertyName("field_id")
@@ -21,9 +20,9 @@ data class Harvest(
     @set:PropertyName("user_uid")
     var userUid: String = "",
 
-    @get:PropertyName("variant_name")
-    @set:PropertyName("variant_name")
-    var variantName: String = "",
+    @get:PropertyName("rice_variant_id")
+    @set:PropertyName("rice_variant_id")
+    var variantId: String = "",
 
     /** Tổng cân nặng thu hoạch (kg) */
     @get:PropertyName("total_weight")
@@ -52,10 +51,10 @@ data class Harvest(
 
     @get:PropertyName("harvest_date")
     @set:PropertyName("harvest_date")
-    var harvestDate: Timestamp = Timestamp.now(),
+    var harvestDate: Timestamp? = null,
 
     /** Tên vụ mùa, ví dụ: "Đông Xuân 2026" */
-    @get:PropertyName("crop_season")
-    @set:PropertyName("crop_season")
-    var cropSeason: String = "",
+    @get:PropertyName("season_template_id")
+    @set:PropertyName("season_template_id")
+    var seasonId: String = "",
 )

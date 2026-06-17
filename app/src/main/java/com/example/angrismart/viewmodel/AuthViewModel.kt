@@ -72,6 +72,24 @@ class AuthViewModel(
 
 
 
+    fun forgotPassword(email: String) {
+        if (email.isBlank()) {
+            _authState.value = Resource.Error("Vui lòng nhập Email để đặt lại mật khẩu!")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                withTimeout(15000L) {
+                    repository.sendPasswordResetEmail(email.trim()).collect { result ->
+                        _authState.value = result
+                    }
+                }
+            } catch (e: Exception) {
+                _authState.value = Resource.Error("Lỗi: ${e.message}")
+            }
+        }
+    }
+
     // Xoá màn hình báo lỗi cũ khi chuyển luồng
     fun resetState() {
         _authState.value = null
