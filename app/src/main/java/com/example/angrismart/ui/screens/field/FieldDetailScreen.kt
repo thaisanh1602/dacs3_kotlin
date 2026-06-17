@@ -1,29 +1,39 @@
 package com.example.angrismart.ui.screens.field
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Farm
-import com.example.angrismart.ui.theme.GreenPrimary
-import com.example.angrismart.ui.theme.GreenSecondary
-import com.example.angrismart.ui.theme.YellowWarning
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
 
@@ -43,27 +53,35 @@ fun FieldDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(farm?.farmName ?: "Chi tiết ruộng", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
+                title = {
+                    Text(
+                        text = farm?.farmName ?: "Chi tiết ruộng",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = TextPrimary)
                     }
                 },
                 actions = {
                     IconButton(onClick = { /* TODO: Sửa */ }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Sửa", tint = Color.White)
+                        Icon(Icons.Default.Edit, contentDescription = "Sửa", tint = TextSecondary)
                     }
                 }
             )
-        }
+        },
+        containerColor = NeutralBg
     ) { paddingValues ->
         if (farm == null) {
             Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                 if (farmsState is Resource.Loading) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = ForestGreen)
                 } else {
-                    Text("Không tìm thấy dữ liệu ruộng")
+                    Text("Không tìm thấy dữ liệu ruộng", fontWeight = FontWeight.Bold, color = TextSecondary)
                 }
             }
             return@Scaffold
@@ -74,77 +92,157 @@ fun FieldDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            // Thẻ Thông tin chính
-            InfoCard(farm)
+            // Farm info card
+            ModernInfoCard(farm)
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Growth progress card
+            ModernGrowthCard(farm)
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Thẻ Tiến độ mùa vụ
-            GrowthProgressCard(farm)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Thẻ Hành động chính
-            MainActions(
-                onNavigateToScan = onNavigateToScan,
-                onNavigateToAddHarvest = onNavigateToAddHarvest,
-                onNavigateToSeasonProfit = onNavigateToSeasonProfit
+            // Quick actions
+            Text(
+                text = "Hành động nhanh",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Scan action
+            ActionButton(
+                icon = Icons.Default.CameraAlt,
+                label = "Quét Sâu Bệnh",
+                subtitle = "Chẩn đoán bệnh cây bằng AI",
+                containerColor = ForestGreen,
+                onClick = onNavigateToScan
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Harvest action
+            ActionButton(
+                icon = Icons.Default.Inventory2,
+                label = "Ghi nhận Thu hoạch",
+                subtitle = "Thêm kết quả thu hoạch mới",
+                containerColor = WarningAmber,
+                onClick = onNavigateToAddHarvest
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Profit action (outlined)
+            OutlinedButton(
+                onClick = onNavigateToSeasonProfit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, ForestGreen)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = ForestGreen,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Xem Lợi nhuận Mùa vụ",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = ForestGreen,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-fun InfoCard(farm: Farm) {
+fun ModernInfoCard(farm: Farm) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = GreenPrimary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Thông tin thửa ruộng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(LightMint),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = ForestGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Thông tin thửa ruộng",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            
-            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
 
-            DetailItem("Giống lúa", farm.varietyName, "🌱")
-            DetailItem("Diện tích", "${farm.areaM2} m²", "📐")
-            DetailItem("Tình trạng", if(farm.status == "active") "Đang canh tác" else "Đã thu hoạch", "✅")
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 14.dp),
+                color = DividerLine
+            )
+
+            InfoRow(label = "Giống lúa", value = farm.varietyName, icon = "🌱")
+            InfoRow(label = "Diện tích", value = "${farm.areaM2} m²", icon = "📐")
+            InfoRow(
+                label = "Tình trạng",
+                value = if (farm.status == "active") "Đang canh tác" else "Đã thu hoạch",
+                icon = if (farm.status == "active") "✅" else "📦"
+            )
         }
     }
 }
 
 @Composable
-fun DetailItem(label: String, value: String, icon: String) {
+fun InfoRow(label: String, value: String, icon: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = icon, fontSize = 20.sp)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = label, color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
+            Text(text = icon, fontSize = 16.sp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
         }
-        Text(text = value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary
+        )
     }
 }
 
 @Composable
-fun GrowthProgressCard(farm: Farm) {
+fun ModernGrowthCard(farm: Farm) {
     val progress = (farm.ageDays.toFloat() / farm.totalGrowthDays.toFloat()).coerceIn(0f, 1f)
     val stageName = getStageName(farm.ageDays, farm.totalGrowthDays)
     val stageColor = getStageColor(farm.ageDays, farm.totalGrowthDays)
-    
-    val stages = listOf("Mạ non", "Đẻ nhánh", "Làm đòng", "Chín", "Thu hoạch")
+    val stages = listOf("Mạ non", "Đẻ nhánh", "Làm đòng", "Chín sáp", "Thu hoạch")
     val currentStageIndex = when {
         progress < 0.2f -> 0
         progress < 0.5f -> 1
@@ -153,11 +251,18 @@ fun GrowthProgressCard(farm: Farm) {
         else -> 4
     }
 
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+        label = "progress_anim"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
@@ -165,176 +270,195 @@ fun GrowthProgressCard(farm: Farm) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Dòng thời gian lúa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Tiến độ tăng trưởng",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = stageColor.copy(alpha = 0.15f)
+                    shape = RoundedCornerShape(10.dp),
+                    color = stageColor.copy(alpha = 0.12f)
                 ) {
                     Text(
-                        text = "Ngày thứ ${farm.ageDays}",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        text = stageName,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         color = stageColor,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // -- Biểu Đồ Thanh Ngang (Timeline Stepper) --
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // Progress timeline stepper
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Background track
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(30.dp),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .padding(horizontal = 12.dp)
+                        .background(NeutralBg, RoundedCornerShape(2.dp))
+                )
+                // Active fill
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Đường line ngang dính liền (nằm dưới)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        for (i in 0 until stages.size - 1) {
-                            val isLineActive = i < currentStageIndex
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(4.dp)
-                                    .background(if (isLineActive) GreenPrimary else Color(0xFFEEEEEE))
-                            )
-                        }
-                    }
-
-                    // Các điểm mốc (Nodes nằm trên line ngang)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        stages.forEachIndexed { index, _ ->
-                            val isActive = index <= currentStageIndex
-                            val isCurrent = index == currentStageIndex
-                            
-                            Box(
-                                modifier = Modifier
-                                    .size(if (isCurrent) 22.dp else 16.dp)
-                                    .background(if (isActive) GreenPrimary else Color(0xFFEEEEEE), androidx.compose.foundation.shape.CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // Lõi trắng nhỏ bé bên trong mốc hiện tại
-                                if (isCurrent) {
-                                    Box(modifier = Modifier.size(10.dp).background(Color.White, androidx.compose.foundation.shape.CircleShape))
-                                }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .height(4.dp)
+                            .background(ForestGreen, RoundedCornerShape(2.dp))
+                    )
+                }
+                // Step nodes
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    stages.forEachIndexed { index, _ ->
+                        val isActive = index <= currentStageIndex
+                        val isCurrent = index == currentStageIndex
+                        Box(
+                            modifier = Modifier
+                                .size(if (isCurrent) 20.dp else 14.dp)
+                                .background(
+                                    color = when {
+                                        isCurrent -> ForestGreen
+                                        isActive -> MintGreen
+                                        else -> DividerLine
+                                    },
+                                    shape = CircleShape
+                                )
+                                .then(
+                                    if (isCurrent) Modifier.border(2.dp, LightMint, CircleShape)
+                                    else Modifier
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCurrent) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .background(Color.White, CircleShape)
+                                )
                             }
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Tên các mốc
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    stages.forEachIndexed { index, name ->
-                        val isCurrent = index == currentStageIndex
-                        Text(
-                            text = name,
-                            fontSize = 11.sp,
-                            color = if (isCurrent) GreenPrimary else Color.Gray,
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.width(55.dp) // Cố định nhẹ để chữ nằm đúng vị trí chấm tròn
-                        )
-                    }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Stage labels
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                stages.forEachIndexed { index, name ->
+                    val isCurrent = index == currentStageIndex
+                    Text(
+                        text = name,
+                        fontSize = 10.sp,
+                        color = if (isCurrent) ForestGreen else TextSecondary,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.width(56.dp)
+                    )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Summary row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                StatChip(label = "Đã sạ", value = "${farm.ageDays} ngày")
+                StatChip(label = "Tổng thời gian", value = "${farm.totalGrowthDays} ngày")
+                StatChip(label = "Còn lại", value = "${(farm.totalGrowthDays - farm.ageDays).coerceAtLeast(0)} ngày")
             }
         }
     }
 }
 
 @Composable
-fun MainActions(
-    onNavigateToScan: () -> Unit,
-    onNavigateToAddHarvest: () -> Unit = {},
-    onNavigateToSeasonProfit: () -> Unit = {}
-) {
-    Column {
+fun StatChip(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "Hành động nhanh",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold
         )
-
-        // Nút quét sâu bệnh
-        Button(
-            onClick = onNavigateToScan,
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
-        ) {
-            Text("🔍 QUÉT SÂU BỆNH CHO RUỘNG NÀY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Nút ghi thu hoạch
-        Button(
-            onClick = onNavigateToAddHarvest,
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = YellowWarning)
-        ) {
-            Text("📦 GHI NHẬN THU HOẠCH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFF3E2723))
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Nút xem lợi nhuận mùa vụ
-        OutlinedButton(
-            onClick = onNavigateToSeasonProfit,
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(2.dp, GreenPrimary)
-        ) {
-            Text("📊 XEM LỢI NHUẬN MÙA VỤ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
-        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary
+        )
     }
 }
 
 @Composable
-fun HistorySection() {
-    Column {
+fun ActionButton(
+    icon: ImageVector,
+    label: String,
+    subtitle: String,
+    containerColor: Color,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Lịch sử chẩn đoán",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            TextButton(onClick = { /* TODO */ }) {
-                Text("Xem tất cả", color = GreenPrimary)
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
             Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Chưa có lịch sử quét nào cho ruộng này", color = Color.Gray)
-                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             }
         }
     }

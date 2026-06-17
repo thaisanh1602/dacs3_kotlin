@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -20,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Harvest
-import com.example.angrismart.ui.theme.GreenPrimary
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.HarvestViewModel
 import java.text.NumberFormat
@@ -38,7 +39,7 @@ fun SeasonProfitScreen(
     val harvestState by harvestViewModel.fieldHarvestState.collectAsState()
     val vndFormat = NumberFormat.getNumberInstance(Locale("vi", "VN"))
 
-    // Khi màn hình mở, load dữ liệu thu hoạch theo ruộng
+    // Load data on screen launch
     LaunchedEffect(fieldId) {
         harvestViewModel.loadHarvestsByField(fieldId)
     }
@@ -53,15 +54,16 @@ fun SeasonProfitScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Lợi Nhuận Mùa Vụ",
-                        color = Color.White,
+                        text = "Lợi Nhuận Mùa Vụ",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = TextPrimary)
                     }
                 }
             )
@@ -69,18 +71,20 @@ fun SeasonProfitScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNavigateToAddHarvest,
-                containerColor = GreenPrimary,
+                containerColor = ForestGreen,
                 contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.shadow(8.dp, RoundedCornerShape(18.dp))
             ) {
                 Text("📦 Ghi thu hoạch mới", fontWeight = FontWeight.Bold)
             }
-        }
+        },
+        containerColor = NeutralBg
     ) { paddingValues ->
         when (harvestState) {
             is Resource.Loading -> {
                 Box(
-                    Modifier
+                    modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
@@ -94,10 +98,10 @@ fun SeasonProfitScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // --- Thẻ tổng hợp lợi nhuận ---
+                    // Summary dashboard card
                     item {
                         ProfitSummaryCard(
                             totalRevenue = totalRevenue,
@@ -109,13 +113,18 @@ fun SeasonProfitScreen(
                     }
 
                     if (harvests.isEmpty()) {
-                        item { EmptyHarvestPlaceholder(onNavigateToAddHarvest) }
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            EmptyHarvestPlaceholder(onNavigateToAddHarvest)
+                        }
                     } else {
                         item {
                             Text(
-                                "Lịch sử thu hoạch",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                text = "Lịch sử thu hoạch",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF0D3321)
+                                ),
                                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                             )
                         }
@@ -129,10 +138,6 @@ fun SeasonProfitScreen(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun ProfitSummaryCard(
     totalRevenue: Double,
@@ -143,14 +148,16 @@ private fun ProfitSummaryCard(
 ) {
     val isProfitable = totalProfit >= 0
     val gradientColors = if (isProfitable)
-        listOf(Color(0xFF1B5E20), Color(0xFF388E3C))
+        listOf(Color(0xFF0D5C34), Color(0xFF1B5E20))
+    // Red/crimson gradient if negative
     else
-        listOf(Color(0xFF880E4F), Color(0xFFC62828))
+        listOf(Color(0xFF880E4F), Color(0xFFB71C1C))
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp)
     ) {
         Box(
             modifier = Modifier
@@ -166,18 +173,20 @@ private fun ProfitSummaryCard(
                 ) {
                     Text(
                         text = "💰 Tổng kết ruộng",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
                     )
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color.White.copy(alpha = 0.2f)
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.2f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
                     ) {
                         Text(
                             text = "$harvestCount vụ thu hoạch",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
                     }
@@ -185,10 +194,11 @@ private fun ProfitSummaryCard(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Doanh thu & Chi phí
+                // Stats summary Columns
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     SummaryStatColumn(
                         label = "📈 Tổng doanh thu",
@@ -198,8 +208,8 @@ private fun ProfitSummaryCard(
                     Box(
                         modifier = Modifier
                             .width(1.dp)
-                            .height(48.dp)
-                            .background(Color.White.copy(alpha = 0.3f))
+                            .height(42.dp)
+                            .background(Color.White.copy(alpha = 0.25f))
                     )
                     SummaryStatColumn(
                         label = "📉 Tổng chi phí",
@@ -209,10 +219,10 @@ private fun ProfitSummaryCard(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.25f))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Lợi nhuận tổng
+                // Total Season Profits Summary
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -220,15 +230,18 @@ private fun ProfitSummaryCard(
                 ) {
                     Text(
                         text = if (isProfitable) "✅ Lợi nhuận" else "❌ Lỗ vốn",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     )
                     Text(
                         text = "${if (totalProfit >= 0) "+" else ""}${vndFormat.format(totalProfit.toLong())} đ",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            fontSize = 28.sp
+                        )
                     )
                 }
             }
@@ -241,16 +254,19 @@ private fun SummaryStatColumn(label: String, value: String, valueColor: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.75f),
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White.copy(alpha = 0.7f)
+            ),
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = valueColor,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Black,
+                color = valueColor
+            ),
             textAlign = TextAlign.Center
         )
     }
@@ -268,58 +284,77 @@ private fun HarvestItemCard(harvest: Harvest, vndFormat: NumberFormat) {
     } catch (e: Exception) { "---" }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header: tên vụ + ngày
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = harvest.cropSeason,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "🌾 ${harvest.variantName}  •  📅 $dateStr",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-                // Badge lợi nhuận
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = profitBgColor
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            // Accent indicator stripe based on profits/loss
+            Box(
+                modifier = Modifier
+                    .width(5.dp)
+                    .fillMaxHeight()
+                    .background(profitColor)
+            )
+            Column(modifier = Modifier.padding(18.dp)) {
+                // Header Details
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "${if (isProfitable) "+" else ""}${vndFormat.format(harvest.profit.toLong())} đ",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = profitColor,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = harvest.cropSeason,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF263238)
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "🌾 ${harvest.variantName}  •  📅 $dateStr",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Gray
+                            )
+                        )
+                    }
+                    // Profits Tag
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = profitBgColor,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, profitColor.copy(alpha = 0.2f))
+                    ) {
+                        Text(
+                            text = "${if (isProfitable) "+" else ""}${vndFormat.format(harvest.profit.toLong())} đ",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
+                            color = profitColor
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFF0F0F0))
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Color(0xFFECEFF1))
+                Spacer(modifier = Modifier.height(14.dp))
 
-            // Chi tiết số liệu
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                HarvestDetailStat("⚖️ Sản lượng", "${vndFormat.format(harvest.totalWeight.toLong())} kg")
-                HarvestDetailStat("💵 Giá bán", "${vndFormat.format(harvest.salePrice.toLong())} đ/kg")
-                HarvestDetailStat("📈 Doanh thu", "${vndFormat.format(harvest.totalRevenue.toLong())} đ")
-                HarvestDetailStat("📉 Chi phí", "${vndFormat.format(harvest.totalExpense.toLong())} đ")
+                // Numerical Columns
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    HarvestDetailStat("⚖️ Sản lượng", "${vndFormat.format(harvest.totalWeight.toLong())} kg")
+                    HarvestDetailStat("💵 Giá bán", "${vndFormat.format(harvest.salePrice.toLong())} đ")
+                    HarvestDetailStat("📈 Doanh thu", "${vndFormat.format(harvest.totalRevenue.toLong())} đ")
+                    HarvestDetailStat("📉 Chi phí", "${vndFormat.format(harvest.totalExpense.toLong())} đ")
+                }
             }
         }
     }
@@ -328,47 +363,73 @@ private fun HarvestItemCard(harvest: Harvest, vndFormat: NumberFormat) {
 @Composable
 private fun HarvestDetailStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontSize = 10.sp)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(text = value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Gray,
+                fontSize = 10.sp
+            )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.Black,
+                color = Color(0xFF37474F),
+                fontSize = 11.sp
+            )
+        )
     }
 }
 
 @Composable
 private fun EmptyHarvestPlaceholder(onAdd: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(40.dp),
+                .padding(36.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("📦", fontSize = 56.sp)
-            Spacer(modifier = Modifier.height(12.dp))
+            Text("📦", fontSize = 58.sp)
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
-                "Chưa có dữ liệu thu hoạch",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF424242)
+                text = "Chưa có dữ liệu thu hoạch",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF263238)
+                )
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Ghi nhận vụ thu hoạch đầu tiên để\nbắt đầu theo dõi lợi nhuận",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Ghi nhận vụ thu hoạch đầu tiên để bắt đầu theo dõi tiến độ lợi nhuận của ruộng.",
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                 color = Color.Gray,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onAdd,
                 colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
-                Text("📦 Ghi thu hoạch đầu tiên", fontWeight = FontWeight.Bold)
+                Text(
+                    text = "📦 Ghi thu hoạch đầu tiên",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                )
             }
         }
     }

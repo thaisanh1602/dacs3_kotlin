@@ -13,12 +13,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.angrismart.ui.theme.GreenPrimary
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
 import android.Manifest
@@ -40,7 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 fun AddFieldScreen(
     viewModel: FieldViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateBackAndRefresh: () -> Unit = {}, // Use this when success
+    onNavigateBackAndRefresh: () -> Unit = {}, // Keep unused exactly
     onSaveSuccess: () -> Unit
 ) {
     var farmName by remember { mutableStateOf("") }
@@ -53,7 +57,7 @@ fun AddFieldScreen(
     val varieties = listOf("Lúa ST25", "Jasmine 85", "Đài Thơm 8", "OM5451")
     val scrollState = rememberScrollState() 
 
-    // --- LOGIC ĐỊNH VỊ GPS ---
+    // --- LOCATION GPS LOGIC ---
     val context = LocalContext.current
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     var locationText by remember { mutableStateOf("Bản đồ GPS Google Maps\n(Chưa có tọa độ)") }
@@ -73,7 +77,6 @@ fun AddFieldScreen(
                         isLoadingLocation = false
                         locationText = "Đã lấy tọa độ!\nVĩ độ: ${lastLoc.latitude}\nKinh độ: ${lastLoc.longitude}"
                     } else {
-                        // Nếu chưa có vị trí lưu trong cache, ép quét GPS mới
                         fusedLocationClient.getCurrentLocation(
                             Priority.PRIORITY_HIGH_ACCURACY,
                             CancellationTokenSource().token
@@ -141,7 +144,7 @@ fun AddFieldScreen(
         }
     }
 
-    // Quan sát nếu ghi thành công lên Đám Mây thì chuyển hướng về
+    // Success redirect
     LaunchedEffect(addState) {
         if (addState is Resource.Success) {
             viewModel.resetAddFarmState()
@@ -149,19 +152,26 @@ fun AddFieldScreen(
         }
     }
 
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Thêm Đồng Ruộng", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
+                title = {
+                    Text(
+                        text = "Thêm Đồng Ruộng",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Trở về", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Trở về", tint = TextPrimary)
                     }
                 }
             )
-        }
+        },
+        containerColor = NeutralBg
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -169,158 +179,261 @@ fun AddFieldScreen(
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
-            // Giả lập Bản đồ lấy GPS siêu dễ dàng
+            // Stylized GPS location map simulator
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .background(Color(0xFFE0E0E0)),
+                    .height(210.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFFECEFF1), Color(0xFFCFD8DC))
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.LocationOn, contentDescription = "Bản đồ", modifier = Modifier.size(48.dp), tint = GreenPrimary)
-                    Text(locationText, color = Color.DarkGray, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+                // Background grid decorative borders
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White.copy(alpha = 0.8f))
+                            .shadow(2.dp, RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Bản đồ",
+                            modifier = Modifier.size(32.dp),
+                            tint = GreenPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = locationText,
+                        color = Color(0xFF37474F),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 18.sp
+                        ),
+                        textAlign = TextAlign.Center
+                    )
                 }
                 
                 Button(
                     onClick = requestLocation,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                        .height(44.dp)
+                        .shadow(4.dp, RoundedCornerShape(20.dp)),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
+                    shape = RoundedCornerShape(20.dp),
                     enabled = !isLoadingLocation
                 ) {
                     if (isLoadingLocation) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.5.dp
+                        )
                     } else {
-                        Text("📍 LẤY VỊ TRÍ NGAY TẠI ĐÂY", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            text = "📍 LẤY VỊ TRÍ NGAY TẠI ĐÂY",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
                     }
                 }
             }
 
-            // Dữ liệu Nhập liệu (Form)
-            Column(
+            // Input Form Card
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(20.dp)
+                    .shadow(6.dp, RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Text(
-                    text = "Thông tin thửa ruộng",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = GreenPrimary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                OutlinedTextField(
-                    value = farmName,
-                    onValueChange = { farmName = it },
-                    label = { Text("Tên mảnh ruộng (VD: Ruộng Ông Bảy)", style = MaterialTheme.typography.bodyLarge) },
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(68.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = area,
-                    onValueChange = { area = it },
-                    label = { Text("Diện tích thật (m²)", style = MaterialTheme.typography.bodyLarge) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(68.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Dropdown Giống lúa (Rất to, cực kì dễ bấm bằng tay không)
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it }
+                        .padding(24.dp)
                 ) {
+                    Text(
+                        text = "Thông tin thửa ruộng",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF0D3321)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(50.dp)
+                            .height(4.dp)
+                            .background(GreenPrimary, RoundedCornerShape(2.dp))
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     OutlinedTextField(
-                        value = selectedVariety,
+                        value = farmName,
+                        onValueChange = { farmName = it },
+                        label = { Text("Tên mảnh ruộng (Ví dụ: Ruộng Ông Bảy)") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GreenPrimary,
+                            unfocusedBorderColor = Color(0xFFCFD8DC),
+                            focusedLabelColor = GreenPrimary
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = area,
+                        onValueChange = { area = it },
+                        label = { Text("Diện tích thật (m²)") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GreenPrimary,
+                            unfocusedBorderColor = Color(0xFFCFD8DC),
+                            focusedLabelColor = GreenPrimary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Rice variety dropdown selector
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedVariety,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Giống lúa đang trồng") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GreenPrimary,
+                                unfocusedBorderColor = Color(0xFFCFD8DC),
+                                focusedLabelColor = GreenPrimary
+                            ),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                                .height(64.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            varieties.forEach { selectionOption ->
+                                DropdownMenuItem(
+                                    text = { Text(selectionOption, style = MaterialTheme.typography.bodyLarge) },
+                                    onClick = {
+                                        selectedVariety = selectionOption
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Sowing date mock selector
+                    OutlinedTextField(
+                        value = "29/03/2026", // Preset mockup date value
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Giống lúa đang trồng", style = MaterialTheme.typography.bodyLarge) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                            focusedBorderColor = GreenPrimary
+                        label = { Text("Ngày gieo sạ (Làm mốc tính toán)") },
+                        trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Lịch", tint = GreenPrimary) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GreenPrimary,
+                            unfocusedBorderColor = Color(0xFFCFD8DC),
+                            focusedLabelColor = GreenPrimary
                         ),
                         modifier = Modifier
-                            .menuAnchor()
                             .fillMaxWidth()
-                            .height(68.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .height(64.dp),
+                        shape = RoundedCornerShape(16.dp)
                     )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    // Save error display tag
+                    if (addState is Resource.Error) {
+                        Text(
+                            text = addState?.message ?: "Lỗi cơ sở dữ liệu",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
+                    // Large Submit Action button with Gradient fill
+                    Button(
+                        onClick = { viewModel.addFarm(farmName, selectedVariety, area) },
+                        contentPadding = PaddingValues(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .shadow(4.dp, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = addState !is Resource.Loading
                     ) {
-                        varieties.forEach { selectionOption ->
-                            DropdownMenuItem(
-                                text = { Text(selectionOption, style = MaterialTheme.typography.bodyLarge) },
-                                onClick = {
-                                    selectedVariety = selectionOption
-                                    expanded = false
-                                }
-                            )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(Color(0xFF0F522E), GreenPrimary)
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (addState is Resource.Loading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.5.dp
+                                )
+                            } else {
+                                Text(
+                                    text = "LƯU CÁNH ĐỒNG NÀY",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                )
+                            }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // DatePicker (Ngày gieo sạ để bộ đếm Firebase tính toán cho chính xác)
-                OutlinedTextField(
-                    value = "29/03/2026", // Giả lập DatePicker
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Ngày gieo sạ (Làm mốc tính toán)", style = MaterialTheme.typography.bodyLarge) },
-                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Lịch", tint = GreenPrimary) },
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GreenPrimary),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(68.dp),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Báo Lỗi Chữ Đỏ nếu Save hụt
-                if (addState is Resource.Error) {
-                    Text(
-                        text = addState?.message ?: "Lỗi csdl",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                }
-
-                // Nút bấm khổng lồ Lưu Dữ Liệu
-                Button(
-                    onClick = { viewModel.addFarm(farmName, selectedVariety, area) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
-                    enabled = addState !is Resource.Loading
-                ) {
-                    if (addState is Resource.Loading) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-                    } else {
-                        Text("LƯU CÁNH ĐỒNG NÀY", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
             }
+            
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

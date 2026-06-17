@@ -5,14 +5,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Grass
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,9 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Farm
-import com.example.angrismart.ui.theme.GreenPrimary
-import com.example.angrismart.ui.theme.GreenSecondary
-import com.example.angrismart.ui.theme.YellowWarning
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
 
@@ -35,146 +38,229 @@ fun MyFieldsScreen(
     onNavigateToAddField: () -> Unit = {},
     onNavigateToFieldDetail: (String) -> Unit = {}
 ) {
-    // Quan sát dòng chảy dữ liệu thực từ Firestore
     val farmsState by viewModel.farmsState.collectAsState()
     val rawFarms = farmsState.data ?: emptyList()
-
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cánh đồng của tôi", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary)
+                title = {
+                    Text(
+                        text = "Cánh đồng của tôi",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = SurfaceWhite
+                )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToAddField,
-                containerColor = GreenPrimary,
+                containerColor = ForestGreen,
                 contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.size(72.dp) // Nút bấm siêu to
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.shadow(8.dp, RoundedCornerShape(18.dp))
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Thêm ruộng", modifier = Modifier.size(36.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Thêm ruộng", modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Thêm Ruộng", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                }
             }
-        }
+        },
+        containerColor = NeutralBg
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (farmsState is Resource.Loading) {
                 item {
-                    CircularProgressIndicator(modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally))
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = ForestGreen)
+                    }
                 }
             } else if (rawFarms.isEmpty() && farmsState is Resource.Success) {
                 item {
-                    Text(
-                        text = "Ông/Bà chưa có cánh đồng nào. Bấm nút dấu + ngay để tạo mới nhé!",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(32.dp).fillMaxWidth()
-                    )
+                    Spacer(modifier = Modifier.height(48.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(36.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(LightMint),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Grass,
+                                    contentDescription = null,
+                                    tint = ForestGreen,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = "Chưa có cánh đồng nào",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Nhấn nút \"Thêm Ruộng\" để bắt đầu quản lý canh tác",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 22.sp
+                            )
+                        }
+                    }
                 }
             } else {
+                item { Spacer(modifier = Modifier.height(4.dp)) }
                 items(rawFarms) { farm ->
-                    FarmCard(farm = farm, onClick = { onNavigateToFieldDetail(farm.id) })
+                    ModernFarmCard(farm = farm, onClick = { onNavigateToFieldDetail(farm.id) })
                 }
             }
 
-            
-            item { Spacer(modifier = Modifier.height(100.dp)) } // Cận đáy tránh bị dính nút nổi
+            item { Spacer(modifier = Modifier.height(100.dp)) }
         }
     }
 }
 
 @Composable
-fun FarmCard(farm: Farm, onClick: () -> Unit) {
+fun ModernFarmCard(farm: Farm, onClick: () -> Unit) {
+    val progressValue = (farm.ageDays.toFloat() / farm.totalGrowthDays.toFloat()).coerceIn(0f, 1f)
+    val stageName = getStageName(farm.ageDays, farm.totalGrowthDays)
+    val stageColor = getStageColor(farm.ageDays, farm.totalGrowthDays)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .shadow(4.dp, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                        colors = listOf(Color(0xFFDCE775), Color(0xFF81C784)) // Vàng chanh sang Xanh lá mảnh ruộng
-                    )
-                )
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Hoa văn mảnh ruộng mờ mờ ở góc
-            Text(
-                text = "🌾",
-                fontSize = 80.sp, // import error sp? Ensure inside composable Text accepts it or we added it
+            // Left – green icon box
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 10.dp, y = 20.dp),
-                color = Color.White.copy(alpha = 0.4f)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(LightMint),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                Text("🌾", fontSize = 26.sp)
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Center – farm info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = farm.farmName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${farm.varietyName} · ${farm.areaM2} m²",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Progress bar
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
-                            text = farm.farmName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF1B5E20)
+                            text = "Ngày ${farm.ageDays}/${farm.totalGrowthDays}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Giống: ${farm.varietyName} • ${farm.areaM2} m²",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF2E7D32),
+                            text = "${(progressValue * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ForestGreen,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                    
-                    // Nổi bật giai đoạn
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color.White.copy(alpha = 0.8f)
-                    ) {
-                        Text(
-                            text = getStageName(farm.ageDays, farm.totalGrowthDays),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            color = getStageColor(farm.ageDays, farm.totalGrowthDays),
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { progressValue },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = ForestGreen,
+                        trackColor = NeutralBg
+                    )
                 }
+            }
 
-                // Giai đoạn bằng text ở đáy
-                Text(
-                    text = "Đã sạ: ${farm.ageDays} / ${farm.totalGrowthDays} ngày",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF1B5E20),
-                    fontWeight = FontWeight.Medium
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Right – stage badge + chevron
+            Column(horizontalAlignment = Alignment.End) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = stageColor.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = stageName,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        color = stageColor,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
     }
 }
 
-// Hàm tính tự động Giai đoạn trưởng thành của lúa
+// Stage name evaluation helper
 fun getStageName(ageDays: Int, totalDays: Int): String {
     val progress = ageDays.toFloat() / totalDays.toFloat()
     return when {
@@ -186,12 +272,13 @@ fun getStageName(ageDays: Int, totalDays: Int): String {
     }
 }
 
+// Stage color evaluation helper
 fun getStageColor(ageDays: Int, totalDays: Int): Color {
     val progress = ageDays.toFloat() / totalDays.toFloat()
     return when {
-        progress < 0.5f -> GreenSecondary
-        progress < 0.8f -> GreenPrimary
-        progress < 1.0f -> YellowWarning
-        else -> Color.Gray
+        progress < 0.5f -> MintGreen
+        progress < 0.8f -> ForestGreen
+        progress < 1.0f -> WarningAmber
+        else -> TextSecondary
     }
 }

@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -19,7 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.angrismart.ui.theme.GreenPrimary
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.HarvestViewModel
 import java.text.NumberFormat
@@ -35,7 +37,7 @@ fun AddHarvestScreen(
 ) {
     val addHarvestState by harvestViewModel.addHarvestState.collectAsState()
 
-    // --- Form state ---
+    // --- Form state variables ---
     var variantName by remember { mutableStateOf("") }
     var totalWeight by remember { mutableStateOf("") }
     var salePrice by remember { mutableStateOf("") }
@@ -43,12 +45,12 @@ fun AddHarvestScreen(
     var cropSeason by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Live preview lợi nhuận
+    // Live preview variables
     val previewRevenue = (totalWeight.toDoubleOrNull() ?: 0.0) * (salePrice.toDoubleOrNull() ?: 0.0)
     val previewProfit = previewRevenue - (totalExpense.toDoubleOrNull() ?: 0.0)
     val vndFormat = NumberFormat.getNumberInstance(Locale("vi", "VN"))
 
-    // --- Side effects ---
+    // Handle firebase write callbacks
     LaunchedEffect(addHarvestState) {
         when (val state = addHarvestState) {
             is Resource.Success -> {
@@ -68,29 +70,31 @@ fun AddHarvestScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Ghi nhận Thu Hoạch",
-                        color = Color.White,
+                        text = "Ghi nhận Thu Hoạch",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại", tint = TextPrimary)
                     }
                 }
             )
-        }
+        },
+        containerColor = NeutralBg
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // --- Preview lợi nhuận (live) ---
+            // Live profit estimator preview
             ProfitPreviewCard(
                 revenue = previewRevenue,
                 expense = totalExpense.toDoubleOrNull() ?: 0.0,
@@ -98,7 +102,7 @@ fun AddHarvestScreen(
                 vndFormat = vndFormat
             )
 
-            // --- Form inputs ---
+            // Input form fields card
             HarvestFormCard(
                 variantName = variantName,
                 onVariantNameChange = { variantName = it },
@@ -112,22 +116,23 @@ fun AddHarvestScreen(
                 onTotalExpenseChange = { totalExpense = it }
             )
 
-            // --- Error message ---
+            // Error display if failed
             errorMessage?.let { msg ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1F0)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = "⚠️ $msg",
-                        modifier = Modifier.padding(12.dp),
-                        color = Color(0xFFB71C1C),
-                        style = MaterialTheme.typography.bodyMedium
+                        modifier = Modifier.padding(16.dp),
+                        color = Color(0xFFD32F2F),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
 
-            // --- Nút lưu ---
+            // Save Submit button
             val isLoading = addHarvestState is Resource.Loading
             Button(
                 onClick = {
@@ -141,25 +146,39 @@ fun AddHarvestScreen(
                         cropSeason = cropSeason
                     )
                 },
+                contentPadding = PaddingValues(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(58.dp)
+                    .shadow(4.dp, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
                 enabled = !isLoading
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        "💾 LƯU THU HOẠCH",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(Color(0xFF0F522E), GreenPrimary)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.5.dp
+                        )
+                    } else {
+                        Text(
+                            text = "💾 LƯU THU HOẠCH",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                    }
                 }
             }
 
@@ -168,10 +187,6 @@ fun AddHarvestScreen(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun ProfitPreviewCard(
     revenue: Double,
@@ -179,32 +194,33 @@ private fun ProfitPreviewCard(
     profit: Double,
     vndFormat: NumberFormat
 ) {
-    val profitColor = if (profit >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
-    val profitBg = if (profit >= 0) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
-    val gradientColors = if (profit >= 0)
-        listOf(Color(0xFF1B5E20), GreenPrimary)
+    val isProfit = profit >= 0
+    val gradientColors = if (isProfit)
+        listOf(Color(0xFF0D5C34), GreenPrimary)
     else
         listOf(Color(0xFFB71C1C), Color(0xFFE53935))
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Brush.linearGradient(colors = gradientColors))
-                .padding(20.dp)
+                .padding(24.dp)
         ) {
             Column {
                 Text(
                     text = "📊 Dự tính lợi nhuận",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -212,22 +228,27 @@ private fun ProfitPreviewCard(
                     PreviewStatItem("Doanh thu", "${vndFormat.format(revenue.toLong())} đ", Color.White)
                     PreviewStatItem("Chi phí", "${vndFormat.format(expense.toLong())} đ", Color.White.copy(alpha = 0.8f))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.25f))
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = if (profit >= 0) "✅ Lợi nhuận" else "❌ Lỗ vốn",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Medium
+                        text = if (isProfit) "✅ Lợi nhuận" else "❌ Lỗ vốn",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = "${if (profit >= 0) "+" else ""}${vndFormat.format(profit.toLong())} đ",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        text = "${if (isProfit) "+" else ""}${vndFormat.format(profit.toLong())} đ",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            fontSize = 26.sp
+                        )
                     )
                 }
             }
@@ -238,12 +259,24 @@ private fun ProfitPreviewCard(
 @Composable
 private fun PreviewStatItem(label: String, value: String, color: Color) {
     Column {
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = color.copy(alpha = 0.8f))
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = color, fontWeight = FontWeight.Bold)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                color = color.copy(alpha = 0.7f)
+            )
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Black,
+                color = color
+            )
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HarvestFormCard(
     variantName: String, onVariantNameChange: (String) -> Unit,
@@ -253,27 +286,37 @@ private fun HarvestFormCard(
     totalExpense: String, onTotalExpenseChange: (String) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Thông tin thu hoạch",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = GreenPrimary
+                text = "Thông tin thu hoạch",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF0D3321)
+                )
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .width(50.dp)
+                    .height(4.dp)
+                    .background(GreenPrimary, RoundedCornerShape(2.dp))
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             HarvestTextField(
                 value = variantName,
                 onValueChange = onVariantNameChange,
                 label = "Tên giống lúa",
-                placeholder = "VD: Đài Thơm 8",
+                placeholder = "Ví dụ: Đài Thơm 8",
                 leadingEmoji = "🌾"
             )
 
@@ -281,7 +324,7 @@ private fun HarvestFormCard(
                 value = cropSeason,
                 onValueChange = onCropSeasonChange,
                 label = "Tên vụ mùa",
-                placeholder = "VD: Đông Xuân 2026",
+                placeholder = "Ví dụ: Đông Xuân 2026",
                 leadingEmoji = "📅"
             )
 
@@ -289,7 +332,7 @@ private fun HarvestFormCard(
                 value = totalWeight,
                 onValueChange = onTotalWeightChange,
                 label = "Tổng cân nặng (kg)",
-                placeholder = "VD: 3500",
+                placeholder = "Ví dụ: 3500",
                 leadingEmoji = "⚖️",
                 keyboardType = KeyboardType.Decimal
             )
@@ -298,7 +341,7 @@ private fun HarvestFormCard(
                 value = salePrice,
                 onValueChange = onSalePriceChange,
                 label = "Giá bán (VNĐ/kg)",
-                placeholder = "VD: 8500",
+                placeholder = "Ví dụ: 8500",
                 leadingEmoji = "💵",
                 keyboardType = KeyboardType.Decimal
             )
@@ -307,7 +350,7 @@ private fun HarvestFormCard(
                 value = totalExpense,
                 onValueChange = onTotalExpenseChange,
                 label = "Tổng chi phí (VNĐ)",
-                placeholder = "VD: 5000000",
+                placeholder = "Ví dụ: 5000000",
                 leadingEmoji = "💸",
                 keyboardType = KeyboardType.Decimal
             )
@@ -329,13 +372,23 @@ private fun HarvestTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        placeholder = { Text(placeholder, color = Color.LightGray, fontSize = 14.sp) },
-        leadingIcon = { Text(leadingEmoji, fontSize = 20.sp) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        placeholder = { Text(placeholder, color = Color.Gray.copy(alpha = 0.5f), fontSize = 14.sp) },
+        leadingIcon = {
+            Box(
+                modifier = Modifier.padding(start = 12.dp, end = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(leadingEmoji, fontSize = 18.sp)
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        shape = RoundedCornerShape(16.dp),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = GreenPrimary,
+            unfocusedBorderColor = Color(0xFFCFD8DC),
             focusedLabelColor = GreenPrimary
         ),
         singleLine = true
