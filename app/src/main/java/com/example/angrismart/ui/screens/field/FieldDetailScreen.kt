@@ -1,16 +1,25 @@
 package com.example.angrismart.ui.screens.field
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import java.util.Calendar
@@ -18,21 +27,23 @@ import java.util.Date
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.angrismart.domain.model.Farm
 import com.example.angrismart.domain.model.RiceVariant
-import com.example.angrismart.ui.theme.GreenPrimary
-import com.example.angrismart.ui.theme.GreenSecondary
-import com.example.angrismart.ui.theme.YellowWarning
+import com.example.angrismart.ui.theme.*
 import com.example.angrismart.utils.Resource
 import com.example.angrismart.viewmodel.FieldViewModel
 import com.example.angrismart.viewmodel.FinancialTransactionViewModel
+import com.example.angrismart.ui.screens.home.getFarmHealth
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +53,7 @@ fun FieldDetailScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
     onNavigateToAddHarvest: () -> Unit = {},
+    onNavigateToScanResult: () -> Unit = {}, // Optional backward-compatibility
     onNavigateToAddTransaction: () -> Unit = {},
     transactionViewModel: FinancialTransactionViewModel = viewModel()
 ) {
@@ -52,7 +64,7 @@ fun FieldDetailScreen(
     val variants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
     val variantName = variants.find { it.id == farm?.varietyId }?.name ?: farm?.varietyId ?: "---"
 
-    // Tải chi phí
+    // Load expenses
     val transactionsState by transactionViewModel.transactions.collectAsState()
     LaunchedEffect(fieldId) {
         if (fieldId.isNotEmpty()) {
@@ -75,128 +87,379 @@ fun FieldDetailScreen(
         initialSelectedDateMillis = farm?.sowingDate?.toDate()?.time ?: System.currentTimeMillis()
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(farm?.farmName ?: "Chi tiết ruộng", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary),
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Cập nhật ngày gieo", tint = Color.White)
-                    }
-                }
-            )
+    // Like state simulation
+    var isLiked by remember { mutableStateOf(false) }
 
-            if (showDatePicker) {
-                DatePickerDialog(
-                    onDismissRequest = { showDatePicker = false },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            datePickerState.selectedDateMillis?.let { millis ->
-                                farm?.let { f ->
-                                    viewModel.updateSowingDate(f, com.google.firebase.Timestamp(Date(millis)))
-                                }
-                            }
-                            showDatePicker = false
-                        }) {
-                            Text("XÁC NHẬN")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDatePicker = false }) {
-                            Text("HỦY")
-                        }
-                    }
-                ) {
-                    DatePicker(state = datePickerState)
-                }
-            }
-        }
-    ) { paddingValues ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(colors = listOf(GlassBgStart, GlassBgEnd)))
+    ) {
         if (farm == null) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 if (farmsState is Resource.Loading) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = ForestGreen)
                 } else {
-                    Text("Không tìm thấy dữ liệu ruộng")
+                    Text("Không tìm thấy dữ liệu ruộng", color = TextPrimary)
                 }
             }
-            return@Scaffold
+            return@Box
         }
+
+        val health = getFarmHealth(farm)
+        val healthColor = when {
+            health < 60 -> DangerRed
+            health < 75 -> WarningAmber
+            else -> ForestGreen
+        }
+        val healthText = when {
+            health < 60 -> "Cần chăm sóc"
+            health < 75 -> "Ổn định"
+            else -> "Khỏe mạnh"
+        }
+
+        val realAgeDays = farm.sowingDate?.let { date ->
+            val diffInMillies = System.currentTimeMillis() - date.toDate().time
+            java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
+        } ?: farm.ageDays
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
         ) {
-            // Thẻ Thông tin chính
-            InfoCard(farm!!, variantName, totalExpense, vndFormat)
+            // 1. HERO HEADER AREA WITH IMAGE & OVERLAYS
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(290.dp)
+            ) {
+                // Crop image replacement (Gradient background mimicking image visual)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color(0xFF2E7D32), Color(0xFF81C784))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Spa,
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp),
+                        tint = Color.White.copy(alpha = 0.35f)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                // Top icons panel (Back, Edit, Settings)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 48.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Trở lại", tint = Color.White)
+                    }
 
-            // Thẻ Tiến độ mùa vụ
-            GrowthProgressCard(farm) {
-                showDatePicker = true
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.4f))
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Sửa ngày gieo", tint = Color.White)
+                        }
+                        IconButton(
+                            onClick = { /* More details */ },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.4f))
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Tùy chọn", tint = Color.White)
+                        }
+                    }
+                }
+
+                // Heart/Like Badge Overlay
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 180.dp, end = 16.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .clickable { isLiked = !isLiked }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Thích",
+                            tint = if (isLiked) DangerRed else Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isLiked) "97" else "96",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // FLOATING CARD: Field variety name & basic stats
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .shadow(8.dp, RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = GlassCardBg)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, GlassCardBorder, RoundedCornerShape(20.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = farm.farmName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = variantName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Stats icons row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.WaterDrop, contentDescription = "Chi phí", tint = InfoBlue, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${vndFormat.format(totalExpense)} đ",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = TextPrimary
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.PhotoCamera, contentDescription = "Diện tích", tint = ForestGreen, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${farm.areaM2.toInt()} m²",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = TextPrimary
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Shield, contentDescription = "Sức khỏe", tint = healthColor, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "$health Sức khỏe",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Thẻ Hành động chính
-            MainActions(
-                onNavigateToScan = onNavigateToScan,
-                onNavigateToAddHarvest = onNavigateToAddHarvest,
-                onNavigateToAddTransaction = onNavigateToAddTransaction
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // 2. PLANT HEALTH CARD (Circular score rating)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = GlassCardBg)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, GlassCardBorder, RoundedCornerShape(20.dp))
+                            .padding(20.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "Sức khỏe ruộng lúa",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // Health Circle
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.size(68.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            progress = { health.toFloat() / 100f },
+                                            modifier = Modifier.fillMaxSize(),
+                                            color = healthColor,
+                                            strokeWidth = 6.dp,
+                                            trackColor = Color(0xFFEEEEEE)
+                                        )
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                text = "$health",
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 20.sp,
+                                                color = healthColor
+                                            )
+                                            Text(
+                                                text = "/100",
+                                                fontSize = 9.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = healthText,
+                                            color = healthColor,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 18.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Kiểm tra: " + if(farm.sowingDate != null) "Mới đây" else "Chưa ghi nhận",
+                                            color = TextSecondary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                                
+                                Button(
+                                    onClick = onNavigateToScan,
+                                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text("Quét nhanh", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
+                // 3. STEPS / TIMELINE GROWTH TIMELINE CARD
+                GrowthProgressCard(farm) {
+                    showDatePicker = true
+                }
 
-@Composable
-fun InfoCard(farm: Farm, variantName: String, totalExpense: Double, vndFormat: NumberFormat) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = GreenPrimary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Thông tin thửa ruộng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                // 4. ACTION PANEL
+                Text(
+                    text = "Thao tác quản lý",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+
+                Button(
+                    onClick = onNavigateToScan,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                ) {
+                    Text("🔍 QUÉT SÂU BỆNH AI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = onNavigateToAddHarvest,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber)
+                ) {
+                    Text("📦 GHI NHẬN THU HOẠCH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                }
+
+                OutlinedButton(
+                    onClick = onNavigateToAddTransaction,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, ForestGreen),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ForestGreen)
+                ) {
+                    Text("💰 THÊM KHOẢN CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
-
-            DetailItem("Giống lúa", variantName, "🌱")
-            DetailItem("Diện tích", "${farm.areaM2} m²", "📐")
-            DetailItem("Chi phí đã chi", "${vndFormat.format(totalExpense)} đ", "💰")
-            DetailItem("Tình trạng", if(farm.status == "active") "Đang canh tác" else "Đã thu hoạch", "✅")
         }
     }
-}
 
-@Composable
-fun DetailItem(label: String, value: String, icon: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = icon, fontSize = 20.sp)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = label, color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        viewModel.updateSowingDate(farm!!, com.google.firebase.Timestamp(Date(millis)))
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("XÁC NHẬN", color = ForestGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("HỦY", color = Color.Gray)
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
-        Text(text = value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -224,191 +487,109 @@ fun GrowthProgressCard(farm: Farm, onUpdateClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = GlassCardBg)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Dòng thời gian lúa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = stageColor.copy(alpha = 0.15f),
-                    modifier = Modifier.clickable { onUpdateClick() }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, GlassCardBorder, RoundedCornerShape(20.dp))
+                .padding(20.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    Text(text = "Tiến độ tăng trưởng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = stageColor.copy(alpha = 0.15f),
+                        modifier = Modifier.clickable { onUpdateClick() }
                     ) {
-                        Text(
-                            text = "Ngày thứ $realAgeDays",
-                            color = stageColor,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = stageColor)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // -- Biểu Đồ Thanh Ngang (Timeline Stepper) --
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(30.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Đường line ngang dính liền (nằm dưới)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        for (i in 0 until stages.size - 1) {
-                            val isLineActive = i < currentStageIndex
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(4.dp)
-                                    .background(if (isLineActive) GreenPrimary else Color(0xFFEEEEEE))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Ngày $realAgeDays / $totalDays",
+                                color = stageColor,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium
                             )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = stageColor)
                         }
                     }
+                }
 
-                    // Các điểm mốc (Nodes nằm trên line ngang)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // -- Biểu Đồ Thanh Ngang (Timeline Stepper) --
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(30.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        stages.forEachIndexed { index, _ ->
-                            val isActive = index <= currentStageIndex
-                            val isCurrent = index == currentStageIndex
-                            
-                            Box(
-                                modifier = Modifier
-                                    .size(if (isCurrent) 22.dp else 16.dp)
-                                    .background(if (isActive) GreenPrimary else Color(0xFFEEEEEE), androidx.compose.foundation.shape.CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // Lõi trắng nhỏ bé bên trong mốc hiện tại
-                                if (isCurrent) {
-                                    Box(modifier = Modifier.size(10.dp).background(Color.White, androidx.compose.foundation.shape.CircleShape))
+                        // Đường line ngang dính liền (nằm dưới)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (i in 0 until stages.size - 1) {
+                                val isLineActive = i < currentStageIndex
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(4.dp)
+                                        .background(if (isLineActive) ForestGreen else Color(0xFFEEEEEE))
+                                )
+                            }
+                        }
+
+                        // Các điểm mốc (Nodes nằm trên line ngang)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            stages.forEachIndexed { index, _ ->
+                                val isActive = index <= currentStageIndex
+                                val isCurrent = index == currentStageIndex
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (isCurrent) 22.dp else 16.dp)
+                                        .background(if (isActive) ForestGreen else Color(0xFFEEEEEE), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isCurrent) {
+                                        Box(modifier = Modifier.size(10.dp).background(Color.White, CircleShape))
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Tên các mốc
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    stages.forEachIndexed { index, name ->
-                        val isCurrent = index == currentStageIndex
-                        Text(
-                            text = name,
-                            fontSize = 11.sp,
-                            color = if (isCurrent) GreenPrimary else Color.Gray,
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.width(55.dp) // Cố định nhẹ để chữ nằm đúng vị trí chấm tròn
-                        )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Tên các mốc
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        stages.forEachIndexed { index, name ->
+                            val isCurrent = index == currentStageIndex
+                            Text(
+                                text = name,
+                                fontSize = 11.sp,
+                                color = if (isCurrent) ForestGreen else Color.Gray,
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(55.dp)
+                            )
+                        }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun MainActions(
-    onNavigateToScan: () -> Unit,
-    onNavigateToAddHarvest: () -> Unit = {},
-    onNavigateToAddTransaction: () -> Unit = {}
-) {
-    Column {
-        Text(
-            text = "Hành động nhanh",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        // Nút quét sâu bệnh
-        Button(
-            onClick = onNavigateToScan,
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
-        ) {
-            Text("🔍 QUÉT SÂU BỆNH CHO RUỘNG NÀY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Nút ghi thu hoạch
-        Button(
-            onClick = onNavigateToAddHarvest,
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = YellowWarning)
-        ) {
-            Text("📦 GHI NHẬN THU HOẠCH", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFF3E2723))
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Nút thêm thu chi
-        OutlinedButton(
-            onClick = onNavigateToAddTransaction,
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(2.dp, GreenPrimary)
-        ) {
-            Text("💰 THÊM KHOẢN CHI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenPrimary)
-        }
-    }
-}
-
-@Composable
-fun HistorySection() {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Lịch sử chẩn đoán",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            TextButton(onClick = { /* TODO */ }) {
-                Text("Xem tất cả", color = GreenPrimary)
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Chưa có lịch sử quét nào cho ruộng này", color = Color.Gray)
                 }
             }
         }

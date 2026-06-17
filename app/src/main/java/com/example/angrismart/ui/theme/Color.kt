@@ -11,6 +11,14 @@ val MintGreen     = Color(0xFF5BAD6F)  // Accent – fresh mint
 val LightMint     = Color(0xFFE8F5E9)  // Light tint for badges / chips
 val PaleGreen     = Color(0xFFF0F7F1)  // Very light surface tint
 
+// Glassmorphism styling tokens
+val GlassBgStart    = Color(0xFFE6F0EA) // Soft mint green background gradient start
+val GlassBgEnd      = Color(0xFFD3EAE0) // Soft mint green background gradient end
+val GlassCardBg     = Color(0xCCFFFFFF) // Translucent white for glassmorphism card (80% opacity)
+val GlassCardBorder = Color(0x4DFFFFFF) // White border with 30% opacity for glass reflection
+val GlassCardBorderDark = Color(0x1F2D5A27) // Forest green tinted border with 12% opacity
+val GlassNavBg      = Color(0xE6FFFFFF) // Highly opaque translucent white for bottom bar
+
 // Semantic colors
 val WarningAmber  = Color(0xFFF59E0B)  // Warning states
 val DangerRed     = Color(0xFFDC2626)  // Error / danger
