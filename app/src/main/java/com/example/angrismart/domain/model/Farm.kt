@@ -35,7 +35,11 @@ data class Farm(
     
     var location: Map<String, Double>? = null,
     
-    var status: String = "active"
+    var status: String = "active",
+
+    @get:PropertyName("is_harvested")
+    @set:PropertyName("is_harvested")
+    var isHarvested: Int = 0
 ) {
     val latitude: Double? get() = location?.get("latitude")
     val longitude: Double? get() = location?.get("longitude")

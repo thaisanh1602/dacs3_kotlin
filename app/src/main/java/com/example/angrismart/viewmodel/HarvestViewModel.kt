@@ -137,6 +137,21 @@ class HarvestViewModel(
         viewModelScope.launch {
             repository.addHarvest(harvest).collect { result ->
                 _addHarvestState.value = result
+                if (result is Resource.Success) {
+                    try {
+                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            .collection("Fields")
+                            .document(fieldId)
+                            .update(
+                                mapOf(
+                                    "is_harvested" to 1,
+                                    "status" to "harvested"
+                                )
+                            )
+                    } catch (e: Exception) {
+                        android.util.Log.e("HarvestViewModel", "Error updating field status: ${e.message}")
+                    }
+                }
             }
         }
     }

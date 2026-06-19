@@ -38,6 +38,7 @@ import java.util.Locale
 fun SeasonProfitScreen(
     harvestViewModel: HarvestViewModel = viewModel(),
     fieldViewModel: FieldViewModel = viewModel(),
+    financialTransactionViewModel: com.example.angrismart.viewmodel.FinancialTransactionViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToAddHarvest: (String) -> Unit = {},
     onNavigateToAddField: () -> Unit = {}
@@ -54,6 +55,7 @@ fun SeasonProfitScreen(
     val vndFormat = remember { NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN")) }
 
     var showFieldPickerDialog by remember { mutableStateOf(false) }
+    var selectedHarvestForDetail by remember { mutableStateOf<Harvest?>(null) }
 
     // Khi màn hình mở, load dữ liệu thu hoạch TOÀN BỘ của user
     LaunchedEffect(Unit) {
@@ -141,7 +143,18 @@ fun SeasonProfitScreen(
                         items(harvests) { harvest ->
                             val riceName = riceVariants.find { it.id == harvest.variantId }?.name ?: harvest.variantId
                             val seasonName = seasons.find { it.id == harvest.seasonId }?.seasonName ?: harvest.seasonId
-                            HarvestItemCard(harvest, riceName, seasonName, vndFormat)
+                            val farmName = farms.find { it.id == harvest.fieldId }?.farmName ?: "Không xác định"
+                            HarvestItemCard(
+                                harvest = harvest,
+                                riceName = riceName,
+                                seasonName = seasonName,
+                                farmName = farmName,
+                                vndFormat = vndFormat,
+                                onClick = {
+                                    selectedHarvestForDetail = harvest
+                                    financialTransactionViewModel.getTransactionsByField(harvest.fieldId)
+                                }
+                            )
                         }
                     }
                 }
@@ -158,9 +171,10 @@ fun SeasonProfitScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (farms.isEmpty()) {
+                    val activeFarms = farms.filter { it.isHarvested == 0 && it.status == "active" }
+                    if (activeFarms.isEmpty()) {
                         Text(
-                            "Bạn chưa có thửa ruộng nào. Vui lòng tạo ruộng mới trước khi ghi nhận thu hoạch.",
+                            "Không có thửa ruộng nào đang hoạt động cần ghi nhận thu hoạch.",
                             color = TextSecondary
                         )
                     } else {
@@ -176,7 +190,7 @@ fun SeasonProfitScreen(
                                 .heightIn(max = 280.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(farms) { farm ->
+                            items(activeFarms) { farm ->
                                 val varietyName = riceVariants.find { it.id == farm.varietyId }?.name ?: farm.varietyId
                                 Card(
                                     modifier = Modifier
@@ -251,6 +265,143 @@ fun SeasonProfitScreen(
             dismissButton = {
                 TextButton(onClick = { showFieldPickerDialog = false }) {
                     Text("Hủy", color = TextSecondary)
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = SurfaceWhite
+        )
+    }
+
+    if (selectedHarvestForDetail != null) {
+        val harvest = selectedHarvestForDetail!!
+        val farmName = farms.find { it.id == harvest.fieldId }?.farmName ?: "Không xác định"
+        val riceName = riceVariants.find { it.id == harvest.variantId }?.name ?: harvest.variantId
+        val seasonName = seasons.find { it.id == harvest.seasonId }?.seasonName ?: harvest.seasonId
+        val transactionsState by financialTransactionViewModel.transactions.collectAsState()
+
+        AlertDialog(
+            onDismissRequest = { selectedHarvestForDetail = null },
+            title = {
+                Text(
+                    text = "Chi tiết Thu hoạch & Chi phí",
+                    fontWeight = FontWeight.Bold,
+                    color = ForestGreen
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Phần 1: Tóm tắt số liệu
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = LightMint),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("Đồng ruộng: $farmName", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("Giống lúa: $riceName", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                            Text("Vụ mùa: $seasonName", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color.LightGray.copy(alpha = 0.5f))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Sản lượng:", color = TextSecondary)
+                                Text("${vndFormat.format(harvest.totalWeight.toLong())} kg", fontWeight = FontWeight.Bold)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Giá bán:", color = TextSecondary)
+                                Text("${vndFormat.format(harvest.salePrice.toLong())} đ/kg", fontWeight = FontWeight.Bold)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Doanh thu:", color = TextSecondary)
+                                Text("${vndFormat.format(harvest.totalRevenue.toLong())} đ", fontWeight = FontWeight.Bold, color = ForestGreen)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Tổng chi phí:", color = TextSecondary)
+                                Text("${vndFormat.format(harvest.totalExpense.toLong())} đ", fontWeight = FontWeight.Bold, color = DangerRed)
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Lợi nhuận:", color = TextSecondary)
+                                val profitColor = if (harvest.profit >= 0) ForestGreen else DangerRed
+                                Text("${vndFormat.format(harvest.profit.toLong())} đ", fontWeight = FontWeight.Black, color = profitColor)
+                            }
+                        }
+                    }
+
+                    // Phần 2: Chi tiết các chi phí
+                    Text(
+                        text = "Danh sách chi phí phát sinh:",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    when (val tState = transactionsState) {
+                        is Resource.Loading -> {
+                            Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = ForestGreen)
+                            }
+                        }
+                        is Resource.Error -> {
+                            Text("Lỗi tải chi phí: ${tState.message}", color = DangerRed)
+                        }
+                        is Resource.Success -> {
+                            val expenses = tState.data?.filter { it.type == "expense" } ?: emptyList()
+                            if (expenses.isEmpty()) {
+                                Text("Không ghi nhận chi phí phát sinh nào.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(expenses) { expense ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFFF9F9F9), RoundedCornerShape(8.dp))
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = expense.category,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 13.sp
+                                                )
+                                                if (expense.note.isNotBlank()) {
+                                                    Text(
+                                                        text = expense.note,
+                                                        color = TextSecondary,
+                                                        fontSize = 11.sp
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = "-${vndFormat.format(expense.price.toLong())} đ",
+                                                color = DangerRed,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { selectedHarvestForDetail = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                ) {
+                    Text("Đóng", color = Color.White)
                 }
             },
             shape = RoundedCornerShape(20.dp),
@@ -387,7 +538,14 @@ private fun SummaryStatColumn(label: String, value: String, valueColor: Color) {
 }
 
 @Composable
-private fun HarvestItemCard(harvest: Harvest, riceName: String, seasonName: String, vndFormat: NumberFormat) {
+private fun HarvestItemCard(
+    harvest: Harvest,
+    riceName: String,
+    seasonName: String,
+    farmName: String,
+    vndFormat: NumberFormat,
+    onClick: () -> Unit
+) {
     val isProfitable = harvest.profit >= 0
     val profitColor = if (isProfitable) Color(0xFF2E7D32) else Color(0xFFC62828)
     val profitBgColor = if (isProfitable) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
@@ -398,13 +556,15 @@ private fun HarvestItemCard(harvest: Harvest, riceName: String, seasonName: Stri
     } catch (e: Exception) { "---" }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header: tên vụ + ngày
+            // Header: tên ruộng + tên vụ + ngày
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -412,12 +572,19 @@ private fun HarvestItemCard(harvest: Harvest, riceName: String, seasonName: Stri
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = seasonName,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                        text = farmName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ForestGreen
                     )
                     Text(
-                        text = "🌾 $riceName  •  📅 $dateStr",
+                        text = "Vụ: $seasonName  •  🌾 $riceName",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "📅 Ngày gặt: $dateStr",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )

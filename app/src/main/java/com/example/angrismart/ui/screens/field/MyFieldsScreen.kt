@@ -82,6 +82,10 @@ fun MyFieldsScreen(
         } else {
             rawFarms
         }
+        
+        // Filter out harvested fields
+        list = list.filter { it.isHarvested == 0 && it.status == "active" }
+
         if (searchQuery.isNotBlank()) {
             list = list.filter { it.farmName.contains(searchQuery, ignoreCase = true) }
         }

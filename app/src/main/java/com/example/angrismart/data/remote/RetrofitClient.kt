@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     // Thay bằng IP mạng LAN của máy tính (ví dụ 192.168.x.x) nếu chạy điện thoại thật
-    private const val BASE_URL = "http://192.168.5.156:8000/api/v1/"
+    private const val BASE_URL = "http://10.0.2.2:8000/api/v1/"
 
     val apiService: ApiService by lazy {
         Retrofit.Builder()
