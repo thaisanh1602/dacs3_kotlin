@@ -57,22 +57,6 @@ fun ScanResultScreen(
         else -> Icons.Default.CheckCircle
     }
 
-    // Dynamic health score based on risk and confidence
-    val score = remember(riskLevel, confidence) {
-        val confVal = confidence.replace("%", "").trim().toDoubleOrNull()?.toInt() ?: 80
-        val baseScore = when (riskLevel.lowercase()) {
-            "high", "cao" -> 40
-            "medium", "trung bình" -> 68
-            else -> 88
-        }
-        (baseScore + (confVal % 11) - 5).coerceIn(10, 100)
-    }
-
-    val scoreText = when {
-        score < 55 -> "Cần lưu ý"
-        score < 75 -> "Khá ổn"
-        else -> "Khỏe mạnh"
-    }
 
     // Animation States
     var showHeader by remember { mutableStateOf(false) }
@@ -119,7 +103,7 @@ fun ScanResultScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // 1. PLANT HEALTH ASSESSMENT CARD (Score Circular progress ring)
+                // 1. DISEASE HEADER CARD
                 AnimatedVisibility(
                     visible = showHeader,
                     enter = fadeIn(tween(500)) + slideInVertically(tween(500), initialOffsetY = { 100 })
@@ -135,109 +119,98 @@ fun ScanResultScreen(
                                 .border(1.dp, GlassCardBorder, RoundedCornerShape(24.dp))
                                 .background(
                                     Brush.verticalGradient(
-                                        colors = listOf(riskColor.copy(alpha = 0.05f), Color.White.copy(alpha = 0.8f))
+                                        colors = listOf(riskColor.copy(alpha = 0.08f), Color.White.copy(alpha = 0.85f))
                                     )
                                 )
                                 .padding(20.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Left Side: Circular score ring
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.size(86.dp)
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // Icon + badge mức độ
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    CircularProgressIndicator(
-                                        progress = { score.toFloat() / 100f },
-                                        modifier = Modifier.fillMaxSize(),
-                                        color = riskColor,
-                                        strokeWidth = 7.dp,
-                                        trackColor = Color(0xFFEEEEEE)
-                                    )
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(CircleShape)
+                                                .background(riskColor.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = riskIcon,
+                                                contentDescription = null,
+                                                tint = riskColor,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
                                         Text(
-                                            text = "$score",
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 24.sp,
-                                            color = riskColor
-                                        )
-                                        Text(
-                                            text = "/100",
-                                            fontSize = 10.sp,
-                                            color = Color.Gray
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = scoreText,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = riskColor
+                                            text = "Kết quả chẩn đoán",
+                                            fontSize = 13.sp,
+                                            color = TextSecondary,
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
-                                }
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                // Right Side: Assessment Details
-                                Column(modifier = Modifier.weight(1f)) {
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(LightMint)
+                                            .background(riskColor.copy(alpha = 0.12f))
                                             .padding(horizontal = 10.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            text = "Sức khỏe cây lúa",
+                                            text = riskLevel,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = ForestGreen
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = diseaseName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Black
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    
-                                    // Progress bar showing confidence
-                                    val confVal = confidence.replace("%", "").trim().toFloatOrNull() ?: 80f
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = "Độ tin cậy AI",
-                                                fontSize = 10.sp,
-                                                color = TextSecondary
-                                            )
-                                            Text(
-                                                text = confidence,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = riskColor
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        LinearProgressIndicator(
-                                            progress = { confVal / 100f },
-                                            color = riskColor,
-                                            trackColor = Color(0xFFEEEEEE),
-                                            drawStopIndicator = {},
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(6.dp)
-                                                .clip(RoundedCornerShape(3.dp))
+                                            color = riskColor
                                         )
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                // Tên bệnh
+                                Text(
+                                    text = diseaseName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Black
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Thanh confidence
+                                val confVal = confidence.replace("%", "").trim().toFloatOrNull() ?: 80f
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Độ tin cậy AI",
+                                        fontSize = 11.sp,
+                                        color = TextSecondary
+                                    )
+                                    Text(
+                                        text = confidence,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = riskColor
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LinearProgressIndicator(
+                                    progress = { confVal / 100f },
+                                    color = riskColor,
+                                    trackColor = Color(0xFFEEEEEE),
+                                    drawStopIndicator = {},
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(7.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                )
                             }
                         }
                     }
