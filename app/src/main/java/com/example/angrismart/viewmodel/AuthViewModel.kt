@@ -94,4 +94,10 @@ class AuthViewModel(
     fun resetState() {
         _authState.value = null
     }
+
+    /** Đăng xuất tài khoản hiện tại — xóa phiên Firebase Auth và reset trạng thái UI */
+    fun signOut() {
+        repository.logout()
+        _authState.value = null
+    }
 }

@@ -5,6 +5,6 @@ import com.example.angrismart.utils.Resource
 import kotlinx.coroutines.flow.Flow
 
 interface FinancialTransactionRepository {
-    fun getTransactionsByField(fieldId: String): Flow<Resource<List<FinancialTransaction>>>
+    fun getTransactionsByField(fieldId: String, userId: String): Flow<Resource<List<FinancialTransaction>>>
     suspend fun addTransaction(transaction: FinancialTransaction): Flow<Resource<String>>
 }
