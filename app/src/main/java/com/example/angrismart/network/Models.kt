@@ -34,3 +34,15 @@ data class ImageInfo(
     @SerializedName("height")
     val height: Int
 )
+
+// ---- Workflow API models ----
+
+/** Kết quả một prediction từ Roboflow Serverless Workflow */
+data class WorkflowPrediction(
+    val className: String,
+    val confidence: Double
+)
+
+/** Exception khi server trả HTTP lỗi (dùng thay cho retrofit2.HttpException khi gọi OkHttp trực tiếp) */
+class HttpStatusException(val code: Int, message: String) : Exception(message)
+
