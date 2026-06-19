@@ -55,13 +55,14 @@ import androidx.compose.ui.window.DialogProperties
 fun ScanDiseaseScreen(
     viewModel: ScanViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToResult: (String, String, String, String, String) -> Unit
+    onNavigateToResult: (String, String, String, String, String, String?) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var hasCameraPermission by remember { mutableStateOf(false) }
     var showInstructions by remember { mutableStateOf(false) }
+    var lastScannedFile by remember { mutableStateOf<File?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -73,6 +74,7 @@ fun ScanDiseaseScreen(
                 tempFile.outputStream().use { out ->
                     inputStream?.copyTo(out)
                 }
+                lastScannedFile = tempFile
                 viewModel.analyzeImage(tempFile)
             } catch (e: Exception) {
                 Log.e("Gallery", "Lỗi mở ảnh", e)
@@ -92,7 +94,8 @@ fun ScanDiseaseScreen(
                     resData.confidence,
                     resData.description,
                     resData.treatment,
-                    resData.riskLevel
+                    resData.riskLevel,
+                    lastScannedFile?.absolutePath
                 )
             }
         }
@@ -335,7 +338,8 @@ fun ScanDiseaseScreen(
                                                 ContextCompat.getMainExecutor(context),
                                                 object : ImageCapture.OnImageSavedCallback {
                                                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                                        viewModel.analyzeImage(photoFile)
+                                                         lastScannedFile = photoFile
+                                                         viewModel.analyzeImage(photoFile)
                                                     }
                                                     override fun onError(exception: ImageCaptureException) {
                                                         Log.e("Upload", "Lỗi Capture Camera", exception)

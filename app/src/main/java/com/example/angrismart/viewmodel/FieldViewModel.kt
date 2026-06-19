@@ -9,6 +9,7 @@ import com.example.angrismart.domain.model.Farm
 import com.example.angrismart.domain.model.RiceVariant
 import com.example.angrismart.domain.repository.FieldRepository
 import com.example.angrismart.utils.Resource
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,8 +35,22 @@ class FieldViewModel(
     private val _addFarmState = MutableStateFlow<Resource<String>?>(null)
     val addFarmState: StateFlow<Resource<String>?> = _addFarmState.asStateFlow()
 
+    // Job để theo dõi và hủy listener cũ khi user thay đổi
+    private var farmLoadJob: Job? = null
+
+    // Lắng nghe thay đổi trạng thái đăng nhập — tự động reload khi user đổi
+    private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+        if (auth.currentUser != null) {
+            loadFarms()
+        } else {
+            // Đăng xuất — xóa sạch dữ liệu cũ
+            farmLoadJob?.cancel()
+            _farmsState.value = Resource.Success(emptyList())
+        }
+    }
+
     init {
-        loadFarms()
+        FirebaseAuth.getInstance().addAuthStateListener(authStateListener)
         loadRiceVariants()
     }
 
@@ -48,8 +63,15 @@ class FieldViewModel(
     }
 
     fun loadFarms() {
-        viewModelScope.launch {
-            repository.getFarms(currentUserId).collect { result ->
+        val uid = currentUserId
+        if (uid.isEmpty()) {
+            _farmsState.value = Resource.Success(emptyList())
+            return
+        }
+        // Hủy listener cũ trước khi tạo listener mới — tránh lẫn dữ liệu giữa các tài khoản
+        farmLoadJob?.cancel()
+        farmLoadJob = viewModelScope.launch {
+            repository.getFarms(uid).collect { result ->
                 _farmsState.value = result
             }
         }
@@ -119,5 +141,12 @@ class FieldViewModel(
     // Xoá trạng thái lưu lại màn hình Thêm để tránh popup liên tục
     fun resetAddFarmState() {
         _addFarmState.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Gỡ listener khi ViewModel bị hủy — tránh memory leak
+        FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
+        farmLoadJob?.cancel()
     }
 }

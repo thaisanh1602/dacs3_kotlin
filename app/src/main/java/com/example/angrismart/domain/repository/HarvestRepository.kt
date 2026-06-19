@@ -11,6 +11,6 @@ interface HarvestRepository {
     /** Lấy toàn bộ lịch sử thu hoạch của một người dùng (realtime). */
     fun getHarvestsByUser(userId: String): Flow<Resource<List<Harvest>>>
 
-    /** Lấy danh sách thu hoạch theo ruộng cụ thể (realtime). */
-    fun getHarvestsByField(fieldId: String): Flow<Resource<List<Harvest>>>
+    /** Lấy danh sách thu hoạch theo ruộng cụ thể, chỉ trả về của người dùng hiện tại (realtime). */
+    fun getHarvestsByField(fieldId: String, userId: String): Flow<Resource<List<Harvest>>>
 }
