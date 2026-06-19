@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
                 var resultDescription by remember { mutableStateOf("") }
                 var resultTreatment by remember { mutableStateOf("") }
                 var resultRiskLevel by remember { mutableStateOf("") }
+                var resultImagePath by remember { mutableStateOf<String?>(null) }
 
                 // --- Xử lý chặn Nút Lùi Vật Lý (Back Button) của thiết bị ---
                 BackHandler(enabled = currentScreen != Screen.LOGIN && currentScreen != Screen.HOME) {
@@ -222,9 +223,12 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToWeather = { currentScreen = Screen.WEATHER },
                                         onNavigateToChat = { currentScreen = Screen.CHAT },
                                         onNavigateToProfit = { currentScreen = Screen.SEASON_PROFIT },
+                                        onNavigateToFieldDetail = { id ->
+                                            selectedFieldId = id
+                                            currentScreen = Screen.FIELD_DETAIL
+                                        },
                                         onLogout = {
-                                            FirebaseAuth.getInstance().signOut()
-                                            authViewModel.resetState()
+                                            authViewModel.signOut()
                                             currentScreen = Screen.LOGIN
                                         }
                                     )
@@ -260,18 +264,20 @@ class MainActivity : ComponentActivity() {
                                 Screen.SCAN -> {
                                     ScanDiseaseScreen(
                                         onNavigateBack = { currentScreen = Screen.HOME },
-                                        onNavigateToResult = { disease, confidence, description, treatment, riskLevel ->
+                                        onNavigateToResult = { disease, confidence, description, treatment, riskLevel, imagePath ->
                                             resultDisease = disease
                                             resultConfidence = confidence
                                             resultDescription = description
                                             resultTreatment = treatment
                                             resultRiskLevel = riskLevel
+                                            resultImagePath = imagePath
                                             currentScreen = Screen.SCAN_RESULT
                                         }
                                     )
                                 }
                                 Screen.SCAN_RESULT -> {
                                     ScanResultScreen(
+                                        imagePath = resultImagePath,
                                         diseaseName = resultDisease,
                                         confidence = resultConfidence,
                                         description = resultDescription,

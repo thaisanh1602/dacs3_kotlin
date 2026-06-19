@@ -69,10 +69,10 @@ class HarvestViewModel(
         }
     }
 
-    /** Load thu hoạch cho một ruộng cụ thể */
+    /** Load thu hoạch cho một ruộng cụ thể — chỉ lấy dữ liệu của người dùng hiện tại */
     fun loadHarvestsByField(fieldId: String) {
         viewModelScope.launch {
-            repository.getHarvestsByField(fieldId).collect { result ->
+            repository.getHarvestsByField(fieldId, currentUserId).collect { result ->
                 _fieldHarvestState.value = result
             }
         }

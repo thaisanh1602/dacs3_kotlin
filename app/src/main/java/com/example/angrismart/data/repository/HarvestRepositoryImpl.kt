@@ -62,12 +62,13 @@ class HarvestRepositoryImpl(
         awaitClose { subscription.remove() }
     }
 
-    /** Realtime listener — thu hoạch theo từng ruộng */
-    override fun getHarvestsByField(fieldId: String): Flow<Resource<List<Harvest>>> = callbackFlow {
+    /** Realtime listener — thu hoạch theo từng ruộng, chỉ của người dùng hiện tại */
+    override fun getHarvestsByField(fieldId: String, userId: String): Flow<Resource<List<Harvest>>> = callbackFlow {
         trySend(Resource.Loading())
 
         val subscription = collection
             .whereEqualTo("field_id", fieldId)
+            .whereEqualTo("user_uid", userId)
             // Không dùng orderBy ở đây để tránh cần Composite Index trên Firestore
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {

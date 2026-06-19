@@ -486,12 +486,6 @@ fun GridFarmCard(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    val health = getFarmHealth(farm)
-    val healthColor = when {
-        health < 60 -> DangerRed
-        health < 75 -> WarningAmber
-        else -> ForestGreen
-    }
 
     val realAgeDays = farm.sowingDate?.let { date ->
         val diffInMillies = System.currentTimeMillis() - date.toDate().time
@@ -528,31 +522,6 @@ fun GridFarmCard(
                     text = "🌾",
                     fontSize = 44.sp
                 )
-                
-                // Circular health indicator overlay
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 8.dp, end = 8.dp)
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        progress = { health.toFloat() / 100f },
-                        modifier = Modifier.size(32.dp),
-                        color = healthColor,
-                        strokeWidth = 3.dp,
-                        trackColor = Color(0xFFEEEEEE)
-                    )
-                    Text(
-                        text = "$health",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        color = healthColor
-                    )
-                }
             }
 
             // Bottom text description area

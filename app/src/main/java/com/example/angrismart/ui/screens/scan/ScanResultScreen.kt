@@ -28,10 +28,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.angrismart.ui.theme.*
 import kotlinx.coroutines.delay
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanResultScreen(
+    imagePath: String? = null,
     diseaseName: String,
     confidence: String,
     description: String,
@@ -70,15 +76,18 @@ fun ScanResultScreen(
 
     // Animation States
     var showHeader by remember { mutableStateOf(false) }
+    var showImage by remember { mutableStateOf(false) }
     var showDesc by remember { mutableStateOf(false) }
     var showTreatment by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         delay(100)
         showHeader = true
-        delay(200)
+        delay(150)
+        showImage = true
+        delay(150)
         showDesc = true
-        delay(200)
+        delay(150)
         showTreatment = true
     }
 
@@ -198,25 +207,86 @@ fun ScanResultScreen(
                                     
                                     // Progress bar showing confidence
                                     val confVal = confidence.replace("%", "").trim().toFloatOrNull() ?: 80f
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Độ tin cậy AI",
+                                                fontSize = 10.sp,
+                                                color = TextSecondary
+                                            )
+                                            Text(
+                                                text = confidence,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = riskColor
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
                                         LinearProgressIndicator(
                                             progress = { confVal / 100f },
                                             color = riskColor,
                                             trackColor = Color(0xFFEEEEEE),
+                                            drawStopIndicator = {},
                                             modifier = Modifier
-                                                .weight(1f)
+                                                .fillMaxWidth()
                                                 .height(6.dp)
                                                 .clip(RoundedCornerShape(3.dp))
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "$confidence",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = TextSecondary
-                                        )
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // 1.5. SCANNED IMAGE CARD
+                AnimatedVisibility(
+                    visible = showImage,
+                    enter = fadeIn(tween(500)) + slideInVertically(tween(500), initialOffsetY = { 100 })
+                ) {
+                    imagePath?.let { path ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = GlassCardBg)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, GlassCardBorder, RoundedCornerShape(24.dp))
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                ) {
+                                    Text("📸", fontSize = 18.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Ảnh lá lúa đã quét",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(File(path))
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Ảnh đã quét",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f)),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
                         }
                     }

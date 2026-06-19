@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.angrismart.domain.model.FinancialTransaction
 import com.example.angrismart.domain.repository.FinancialTransactionRepository
 import com.example.angrismart.utils.Resource
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,10 @@ class FinancialTransactionViewModel(
     private val repository: FinancialTransactionRepository = com.example.angrismart.data.repository.FinancialTransactionRepositoryImpl()
 ) : ViewModel() {
 
+    // Lấy userId từ Firebase Auth, tránh lẫn dữ liệu giữa các tài khoản
+    private val currentUserId: String
+        get() = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
     private val _transactions = MutableStateFlow<Resource<List<FinancialTransaction>>>(Resource.Loading())
     val transactions: StateFlow<Resource<List<FinancialTransaction>>> = _transactions.asStateFlow()
 
@@ -23,7 +28,7 @@ class FinancialTransactionViewModel(
 
     fun getTransactionsByField(fieldId: String) {
         viewModelScope.launch {
-            repository.getTransactionsByField(fieldId).collectLatest { result ->
+            repository.getTransactionsByField(fieldId, currentUserId).collectLatest { result ->
                 _transactions.value = result
             }
         }

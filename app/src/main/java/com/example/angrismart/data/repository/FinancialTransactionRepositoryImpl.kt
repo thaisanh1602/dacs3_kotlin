@@ -15,11 +15,12 @@ class FinancialTransactionRepositoryImpl(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : FinancialTransactionRepository {
 
-    override fun getTransactionsByField(fieldId: String): Flow<Resource<List<FinancialTransaction>>> = callbackFlow {
+    override fun getTransactionsByField(fieldId: String, userId: String): Flow<Resource<List<FinancialTransaction>>> = callbackFlow {
         trySend(Resource.Loading())
 
         val subscription = firestore.collection("financial_transactions")
             .whereEqualTo("field_id", fieldId)
+            .whereEqualTo("user_uid", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(Resource.Error(error.message ?: "Lỗi csdl khi tải dữ liệu"))

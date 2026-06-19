@@ -124,18 +124,6 @@ fun FieldDetailScreen(
             return@Box
         }
 
-        val health = getFarmHealth(farm)
-        val healthColor = when {
-            health < 60 -> DangerRed
-            health < 75 -> WarningAmber
-            else -> ForestGreen
-        }
-        val healthText = when {
-            health < 60 -> "Cần chăm sóc"
-            health < 75 -> "Ổn định"
-            else -> "Khỏe mạnh"
-        }
-
         val realAgeDays = farm.sowingDate?.let { date ->
             val diffInMillies = System.currentTimeMillis() - date.toDate().time
             java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffInMillies).toInt().coerceAtLeast(0)
@@ -317,16 +305,6 @@ fun FieldDetailScreen(
                                         color = TextPrimary
                                     )
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Shield, contentDescription = "Sức khỏe", tint = healthColor, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "$health Sức khỏe",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = TextPrimary
-                                    )
-                                }
                             }
                         }
                     }
@@ -341,90 +319,7 @@ fun FieldDetailScreen(
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // 2. PLANT HEALTH CARD (Circular score rating)
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = GlassCardBg)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, GlassCardBorder, RoundedCornerShape(20.dp))
-                            .padding(20.dp)
-                    ) {
-                        Column {
-                            Text(
-                                text = "Sức khỏe ruộng lúa",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    // Health Circle
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.size(68.dp)
-                                    ) {
-                                        CircularProgressIndicator(
-                                            progress = { health.toFloat() / 100f },
-                                            modifier = Modifier.fillMaxSize(),
-                                            color = healthColor,
-                                            strokeWidth = 6.dp,
-                                            trackColor = Color(0xFFEEEEEE)
-                                        )
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                text = "$health",
-                                                fontWeight = FontWeight.Black,
-                                                fontSize = 20.sp,
-                                                color = healthColor
-                                            )
-                                            Text(
-                                                text = "/100",
-                                                fontSize = 9.sp,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(
-                                            text = healthText,
-                                            color = healthColor,
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 18.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "Kiểm tra: " + if(farm.sowingDate != null) "Mới đây" else "Chưa ghi nhận",
-                                            color = TextSecondary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                                
-                                Button(
-                                    onClick = onNavigateToScan,
-                                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Text("Quét nhanh", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. STEPS / TIMELINE GROWTH TIMELINE CARD
+                // 2. STEPS / TIMELINE GROWTH TIMELINE CARD
                 GrowthProgressCard(farm) {
                     showDatePicker = true
                 }

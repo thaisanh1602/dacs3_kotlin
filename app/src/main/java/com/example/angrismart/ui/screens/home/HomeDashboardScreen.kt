@@ -549,13 +549,6 @@ fun WeatherCardContent(weatherState: Resource<com.example.angrismart.data.remote
 
 @Composable
 fun DashboardFarmItem(farm: Farm, variantName: String, onClick: () -> Unit) {
-    val health = getFarmHealth(farm)
-    val healthColor = when {
-        health < 60 -> DangerRed
-        health < 75 -> WarningAmber
-        else -> ForestGreen
-    }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -601,26 +594,6 @@ fun DashboardFarmItem(farm: Farm, variantName: String, onClick: () -> Unit) {
                 }
             }
 
-            // Health percentage capsule
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(healthColor.copy(alpha = 0.12f))
-                    .border(1.dp, healthColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (health < 60) {
-                        Text("📉 ", fontSize = 11.sp)
-                    }
-                    Text(
-                        text = "$health%",
-                        color = healthColor,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 11.sp
-                    )
-                }
-            }
         }
     }
 }
