@@ -49,7 +49,8 @@ fun MyFieldsScreen(
 ) {
     val farmsState by viewModel.farmsState.collectAsState()
     val riceVariantsState by viewModel.riceVariantsState.collectAsState()
-    val rawFarms = farmsState.data ?: emptyList()
+    val rawFarmsAll = farmsState.data ?: emptyList()
+    val rawFarms = remember(rawFarmsAll) { rawFarmsAll.filter { it.isHarvested == 0 && it.status == "active" } }
     val variants: List<RiceVariant> = riceVariantsState.data ?: emptyList()
 
     LaunchedEffect(Unit) {

@@ -9,7 +9,6 @@ data class ChatRequest(
 )
 
 data class ChatResponse(
-    val reply: String,
-    @SerializedName("source_documents")
-    val sourceDocuments: List<String>? = null
+    val status: String,
+    val answer: String
 )

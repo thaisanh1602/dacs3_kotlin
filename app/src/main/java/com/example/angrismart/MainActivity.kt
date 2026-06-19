@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // DataSeeder.seedData(); // Gỡ bỏ nạp tự động lỗi UID
+         DataSeeder.resetData(); // Gỡ bỏ nạp tự động lỗi UID
         // 1. Tạo kênh thông báo Push
         NotificationHelper.createChannel(this)
 

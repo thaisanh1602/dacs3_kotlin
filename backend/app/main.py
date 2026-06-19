@@ -17,7 +17,9 @@ app.add_middleware(
 )
 
 from app.api.v1 import disease
+from app.api.v1 import chat
 app.include_router(disease.router, prefix="/api/v1/disease", tags=["AI Image Scanning"])
+app.include_router(chat.router, prefix="/api/v1/chat", tags=["Expert Chatbot"])
 
 @app.get("/")
 def read_root():
