@@ -65,6 +65,8 @@ fun AddFieldScreen(
     val scrollState = rememberScrollState()
 
     val context = LocalContext.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val mapHeight = remember { (configuration.screenHeightDp / 3).dp }
     var currentLatLng by remember { mutableStateOf<LatLng?>(null) }
     
     val mapViewModel: com.example.angrismart.ui.screens.map.MapViewModel = viewModel(
@@ -77,7 +79,6 @@ fun AddFieldScreen(
     val farmlands by mapViewModel.farmlands.collectAsState()
     val mapCenter by mapViewModel.mapCenter.collectAsState()
     val selectedFarmland by mapViewModel.selectedFarmland.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
 
     val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
         position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(LatLng(10.762622, 106.660172), 5f)
@@ -93,7 +94,9 @@ fun AddFieldScreen(
 
     LaunchedEffect(mapCenter) {
         mapCenter?.let {
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it, 15f))
+            val currentZoom = cameraPositionState.position.zoom
+            val targetZoom = if (currentZoom >= 14f) currentZoom else 15f
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it, targetZoom))
         }
     }
 
@@ -124,7 +127,9 @@ fun AddFieldScreen(
                 if (lastLoc != null) {
                     val latlng = LatLng(lastLoc.latitude, lastLoc.longitude)
                     currentLatLng = latlng
-                    cameraPositionState.position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(latlng, 16f)
+                    val currentZoom = cameraPositionState.position.zoom
+                    val targetZoom = if (currentZoom >= 14f) currentZoom else 16f
+                    cameraPositionState.position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(latlng, targetZoom)
                 }
             }
         } else {
@@ -164,23 +169,10 @@ fun AddFieldScreen(
                 .padding(paddingValues)
                 // ĐÃ XÓA verticalScroll TẠI ĐÂY ĐỂ TRÁNH XUNG ĐỘT SCROLL MAP
         ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Tìm xã, huyện, ấp...") },
-                    shape = RoundedCornerShape(12.dp)
-                )
-                IconButton(onClick = { mapViewModel.searchLocation(searchQuery) }) {
-                    Icon(Icons.Default.Search, contentDescription = "Tìm kiếm", tint = GreenPrimary)
-                }
-            }
-        
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .height(mapHeight)
             ) {
                 com.google.maps.android.compose.GoogleMap(
                     modifier = Modifier.fillMaxSize(),
@@ -188,13 +180,34 @@ fun AddFieldScreen(
                     uiSettings = com.google.maps.android.compose.MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
                     onMapClick = { latLng ->
                         currentLatLng = latLng
+                        val clickedFarmland = farmlands.firstOrNull { farmland ->
+                            isPointInPolygon(latLng, farmland.points)
+                        }
+                        mapViewModel.selectFarmland(clickedFarmland)
                     }
                 ) {
                     // Manual pin
-                    currentLatLng?.let {
+                    currentLatLng?.let { pinLatLng ->
+                        val markerState = com.google.maps.android.compose.rememberMarkerState(position = pinLatLng)
+                        
+                        LaunchedEffect(pinLatLng) {
+                            markerState.position = pinLatLng
+                        }
+                        
+                        LaunchedEffect(markerState.position) {
+                            if (currentLatLng != markerState.position) {
+                                currentLatLng = markerState.position
+                                val clickedFarmland = farmlands.firstOrNull { farmland ->
+                                    isPointInPolygon(markerState.position, farmland.points)
+                                }
+                                mapViewModel.selectFarmland(clickedFarmland)
+                            }
+                        }
+
                         com.google.maps.android.compose.Marker(
-                            state = com.google.maps.android.compose.MarkerState(position = it),
-                            title = "Vị trí được chọn"
+                            state = markerState,
+                            title = "Vị trí được chọn",
+                            draggable = true
                         )
                     }
 
@@ -208,11 +221,7 @@ fun AddFieldScreen(
                                 Color(0x6400FF00),
                             strokeColor = Color.DarkGray,
                             strokeWidth = 3f,
-                            clickable = true,
-                            onClick = {
-                                mapViewModel.selectFarmland(farmland)
-                                currentLatLng = farmland.points.first()
-                            }
+                            clickable = false
                         )
                     }
                 }
@@ -366,4 +375,21 @@ fun AddFieldScreen(
             }
         }
     }
+}
+
+private fun isPointInPolygon(point: LatLng, polygon: List<LatLng>): Boolean {
+    if (polygon.size < 3) return false
+    var isInside = false
+    var j = polygon.size - 1
+    for (i in polygon.indices) {
+        val pi = polygon[i]
+        val pj = polygon[j]
+        if (((pi.latitude > point.latitude) != (pj.latitude > point.latitude)) &&
+            (point.longitude < (pj.longitude - pi.longitude) * (point.latitude - pi.latitude) / (pj.latitude - pi.latitude) + pi.longitude)
+        ) {
+            isInside = !isInside
+        }
+        j = i
+    }
+    return isInside
 }

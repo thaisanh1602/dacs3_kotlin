@@ -134,8 +134,6 @@ fun HomeDashboardScreen(
 
     val scrollState = rememberScrollState()
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showResetDataDialog by remember { mutableStateOf(false) }
-    var isResettingData by remember { mutableStateOf(false) }
 
     // Greeting logic based on time
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -464,29 +462,6 @@ fun HomeDashboardScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showResetDataDialog = true },
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.7f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("🔄 Đặt lại dữ liệu mẫu", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Xóa toàn bộ dữ liệu ruộng, vụ mùa hiện tại và nạp lại dữ liệu mẫu mới", color = TextSecondary, fontSize = 11.sp, lineHeight = 14.sp)
-                    }
-                    Text("⚙️", fontSize = 24.sp, modifier = Modifier.padding(start = 8.dp))
-                }
-            }
-
             Spacer(modifier = Modifier.height(60.dp))
         }
 
@@ -513,54 +488,7 @@ fun HomeDashboardScreen(
             )
         }
 
-        if (showResetDataDialog) {
-            AlertDialog(
-                onDismissRequest = { 
-                    if (!isResettingData) showResetDataDialog = false 
-                },
-                title = { Text("Đặt lại dữ liệu", fontWeight = FontWeight.Bold) },
-                text = {
-                    if (isResettingData) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                        ) {
-                            CircularProgressIndicator(color = ForestGreen)
-                            Text("Đang đặt lại dữ liệu mẫu...", color = TextPrimary)
-                        }
-                    } else {
-                        Text("Hành động này sẽ xóa sạch dữ liệu ruộng, chi phí, vụ mùa hiện tại của bạn trên Firestore và nạp lại bộ dữ liệu mẫu chuẩn ban đầu. Bà con có chắc chắn muốn tiếp tục?")
-                    }
-                },
-                confirmButton = {
-                    if (!isResettingData) {
-                        TextButton(
-                            onClick = {
-                                isResettingData = true
-                                com.example.angrismart.utils.DataSeeder.resetData(onComplete = {
-                                    val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                                    com.example.angrismart.utils.DataSeeder.seedData(uid)
-                                    isResettingData = false
-                                    showResetDataDialog = false
-                                    android.widget.Toast.makeText(context, "Đặt lại dữ liệu mẫu thành công!", android.widget.Toast.LENGTH_SHORT).show()
-                                    fieldViewModel.loadFarms()
-                                })
-                            }
-                        ) {
-                            Text("Đồng ý", color = DangerRed, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                },
-                dismissButton = {
-                    if (!isResettingData) {
-                        TextButton(onClick = { showResetDataDialog = false }) {
-                            Text("Hủy", color = TextPrimary)
-                        }
-                    }
-                }
-            )
-        }
+
     }
 }
 

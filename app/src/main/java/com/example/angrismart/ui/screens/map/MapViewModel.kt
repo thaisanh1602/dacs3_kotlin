@@ -113,7 +113,7 @@ class MapViewModel(private val apiService: MapApiService) : ViewModel() {
         }
     }
 
-    fun selectFarmland(polygon: FarmlandPolygon) {
+    fun selectFarmland(polygon: FarmlandPolygon?) {
         _selectedFarmland.value = polygon
     }
 }

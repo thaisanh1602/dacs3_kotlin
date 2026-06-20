@@ -43,16 +43,6 @@ object DataSeeder {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
         dateFormat.timeZone = TimeZone.getTimeZone("UTC")
 
-        // 1. Users
-        val usersData = mapOf(
-            "id" to "1",
-            "name" to "Nguyễn Văn An",
-            "email" to "annguyen@gmail.com",
-            "password" to "123456",
-            "created_at" to dateFormat.parse("2026-04-16T10:00:00Z")?.let { Timestamp(it) }
-        )
-        db.collection("users").document("1").set(usersData)
-
         // 2. Rice Variants
         val riceVariants = listOf(
             mapOf("id" to "1", "name" to "ST25", "total_growth_days" to 105),
@@ -142,10 +132,10 @@ object DataSeeder {
 
         // 6. Harvests (4 Harvests for Fields 5, 6, 7, 8)
         val harvests = listOf(
-            mapOf("id" to "h5", "field_id" to "5", "user_uid" to currentUid, "total_weight" to 450.0, "rice_variant_id" to "1", "sale_price" to 8500.0, "total_expense" to 280000.0, "total_revenue" to 3825000.0, "profit" to 3545000.0, "harvest_date" to dateFormat.parse("2026-05-12T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "1", "is_harvested" to "0"),
-            mapOf("id" to "h6", "field_id" to "6", "user_uid" to currentUid, "total_weight" to 400.0, "rice_variant_id" to "2", "sale_price" to 8300.0, "total_expense" to 650000.0, "total_revenue" to 3320000.0, "profit" to 2670000.0, "harvest_date" to dateFormat.parse("2026-05-01T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "1", "is_harvested" to "0"),
-            mapOf("id" to "h7", "field_id" to "7", "user_uid" to currentUid, "total_weight" to 600.0, "rice_variant_id" to "3", "sale_price" to 8800.0, "total_expense" to 700000.0, "total_revenue" to 5280000.0, "profit" to 4580000.0, "harvest_date" to dateFormat.parse("2026-05-08T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "2", "is_harvested" to "0"),
-            mapOf("id" to "h8", "field_id" to "8", "user_uid" to currentUid, "total_weight" to 900.0, "rice_variant_id" to "4", "sale_price" to 8100.0, "total_expense" to 900000.0, "total_revenue" to 7290000.0, "profit" to 6390000.0, "harvest_date" to dateFormat.parse("2026-05-11T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "2", "is_harvested" to "0")
+            mapOf("id" to "h5", "field_id" to "5", "user_uid" to currentUid, "total_weight" to 450.0, "rice_variant_id" to "1", "sale_price" to 8500.0, "total_expense" to 280000.0, "total_revenue" to 3825000.0, "profit" to 3545000.0, "harvest_date" to dateFormat.parse("2026-05-12T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "1",),
+            mapOf("id" to "h6", "field_id" to "6", "user_uid" to currentUid, "total_weight" to 400.0, "rice_variant_id" to "2", "sale_price" to 8300.0, "total_expense" to 650000.0, "total_revenue" to 3320000.0, "profit" to 2670000.0, "harvest_date" to dateFormat.parse("2026-05-01T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "1",),
+            mapOf("id" to "h7", "field_id" to "7", "user_uid" to currentUid, "total_weight" to 600.0, "rice_variant_id" to "3", "sale_price" to 8800.0, "total_expense" to 700000.0, "total_revenue" to 5280000.0, "profit" to 4580000.0, "harvest_date" to dateFormat.parse("2026-05-08T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "2",),
+            mapOf("id" to "h8", "field_id" to "8", "user_uid" to currentUid, "total_weight" to 900.0, "rice_variant_id" to "4", "sale_price" to 8100.0, "total_expense" to 900000.0, "total_revenue" to 7290000.0, "profit" to 6390000.0, "harvest_date" to dateFormat.parse("2026-05-11T08:00:00Z")?.let { Timestamp(it) }, "season_template_id" to "2",)
         )
         harvests.forEach { harvest ->
             db.collection("Harvests").document(harvest["id"].toString()).set(harvest)
